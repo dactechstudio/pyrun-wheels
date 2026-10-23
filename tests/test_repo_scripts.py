@@ -97,11 +97,11 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         self.assertEqual(workflow["jobs"]["build"]["strategy"]["matrix"]["include"][1]["runner"], "macos-15")
         self.assertEqual(workflow["jobs"]["build"]["strategy"]["matrix"]["include"][1]["abi"], "arm64_v8a")
         matrix = workflow["jobs"]["build"]["strategy"]["matrix"]["include"]
-        self.assertEqual({item["abi"] for item in matrix if item["emulator_test"] == "true"}, {"x86_64"})
-        self.assertEqual({item["abi"] for item in matrix if item["emulator_test"] == "false"}, {"arm64_v8a"})
+        self.assertEqual({item["abi"] for item in matrix if item["emulator_test"] == "true"}, {"x86_64", "arm64_v8a"})
+        self.assertFalse(any(item["emulator_test"] == "false" for item in matrix))
         emulator_setup = [
             step for step in workflow["jobs"]["build"]["steps"]
-            if step["name"] == "Install Android emulator on supported Linux CI runner"
+            if step["name"] == "Install Android emulator"
         ]
         self.assertEqual(len(emulator_setup), 1)
         self.assertEqual(emulator_setup[0]["run"].strip(), '"${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install "emulator"')

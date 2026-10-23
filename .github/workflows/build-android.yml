@@ -48,7 +48,7 @@ jobs:
           - runner: macos-15
             abi: arm64_v8a
             cibw_arch: arm64_v8a
-            emulator_test: false
+            emulator_test: true
     runs-on: ${{ matrix.runner }}
     env:
       ANDROID_API_LEVEL: "25"
@@ -84,7 +84,7 @@ jobs:
           "$sdkmanager" --install "ndk;30.0.16248370"
           echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/30.0.16248370" >> "$GITHUB_ENV"
 
-      - name: Install Android emulator on supported Linux CI runner
+      - name: Install Android emulator
         if: ${{ matrix.emulator_test }}
         shell: bash
         run: |
