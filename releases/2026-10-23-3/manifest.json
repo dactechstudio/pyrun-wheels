@@ -1,0 +1,63 @@
+{
+  "androidMinApi": 25,
+  "artifacts": [
+    {
+      "abi": "arm64_v8a",
+      "androidApi": 25,
+      "filename": "pyrun_native_probe-0.1.0-cp313-cp313-android_25_arm64_v8a.whl",
+      "license": "MIT",
+      "name": "pyrun-native-probe",
+      "patches": [],
+      "playRuntimeInstallAllowed": false,
+      "pythonTag": "cp313-cp313",
+      "recipePath": "recipes/native_probe/recipe.json",
+      "recipeSha256": "ed39bc83decc410a5cbf97b398591afbbabad5712b02c59875663e40f1fd12f7",
+      "sbomPath": "sbom/pyrun-native-probe.cdx.json",
+      "sbomSha256": "3f6dd9c4023bc5be75f8d245c987bac7607ed73fac4bde4a8b9052a2603445f5",
+      "sha256": "cb1558c79631de479150cd19bf7865cd90acd03f02572f530c373137dee06211",
+      "sourceTreeSha256": "94ff17a033f1fe822a44783f15ac6cd3e4448043c43ca8a1427e8c7efde1c812",
+      "sourceUrl": "https://github.com/dactechstudio/pyrun-wheels/tree/aadd05cc6561e53af67cb6e88301ce081b05a6bc/recipes/native_probe",
+      "url": "packages/pyrun_native_probe-0.1.0-cp313-cp313-android_25_arm64_v8a.whl",
+      "version": "0.1.0",
+      "yanked": false
+    },
+    {
+      "abi": "x86_64",
+      "androidApi": 25,
+      "filename": "pyrun_native_probe-0.1.0-cp313-cp313-android_25_x86_64.whl",
+      "license": "MIT",
+      "name": "pyrun-native-probe",
+      "patches": [],
+      "playRuntimeInstallAllowed": false,
+      "pythonTag": "cp313-cp313",
+      "recipePath": "recipes/native_probe/recipe.json",
+      "recipeSha256": "ed39bc83decc410a5cbf97b398591afbbabad5712b02c59875663e40f1fd12f7",
+      "sbomPath": "sbom/pyrun-native-probe.cdx.json",
+      "sbomSha256": "3f6dd9c4023bc5be75f8d245c987bac7607ed73fac4bde4a8b9052a2603445f5",
+      "sha256": "1a915c9e06254d1059cf71a4628cb2fb05e1777ae2167430362be83724162097",
+      "sourceTreeSha256": "94ff17a033f1fe822a44783f15ac6cd3e4448043c43ca8a1427e8c7efde1c812",
+      "sourceUrl": "https://github.com/dactechstudio/pyrun-wheels/tree/aadd05cc6561e53af67cb6e88301ce081b05a6bc/recipes/native_probe",
+      "url": "packages/pyrun_native_probe-0.1.0-cp313-cp313-android_25_x86_64.whl",
+      "version": "0.1.0",
+      "yanked": false
+    }
+  ],
+  "ndkVersion": "30.0.16248370",
+  "pythonVersion": "3.13",
+  "schemaVersion": 1,
+  "simpleIndexes": [
+    {
+      "name": "root",
+      "path": "index.html",
+      "sha256": "23480a7cbaf0c47bb192221fe7ffb401fa2452b5c33ebe2f31761758e7826f9a"
+    },
+    {
+      "name": "pyrun-native-probe",
+      "path": "simple/pyrun-native-probe/index.html",
+      "sha256": "4ab9bd979309bb802d75b99029465b5acf88d7c2595e331e034de0b30ea18fb2"
+    }
+  ],
+  "sourceRevision": "aadd05cc6561e53af67cb6e88301ce081b05a6bc",
+  "toolchainPath": "toolchain.lock",
+  "toolchainSha256": "318c9843aade8b5b78c43a6d6b93f88297ef1488f390ab6ba3ef895be4477d73"
+}

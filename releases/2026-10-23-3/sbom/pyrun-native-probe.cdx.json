@@ -1,0 +1,17 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:3d5822b3-8745-463e-854d-a46861c9c6f6",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "library",
+      "name": "pyrun-native-probe",
+      "version": "0.1.0",
+      "licenses": [{ "license": { "id": "MIT" } }],
+      "purl": "pkg:pypi/pyrun-native-probe@0.1.0"
+    }
+  },
+  "components": [],
+  "dependencies": [{ "ref": "pkg:pypi/pyrun-native-probe@0.1.0", "dependsOn": [] }]
+}
