@@ -45,6 +45,23 @@ manifest with Ed25519, promotes it into a new release directory, and uploads a
 90-day signed review artifact. It does not publish to Pages or create a GitHub
 Release.
 
+The `Publish signed wheel snapshot to GitHub Pages` workflow is also manually
+dispatched from `main`. Give it the successful signing-workflow run ID and the
+same release ID, then approve the protected `github-pages` environment. It
+downloads only that run's signed artifact, verifies the signature and all
+manifest hashes again, adds the snapshot to an immutable `gh-pages` history
+branch, and deploys a cumulative static site with GitHub Pages Actions. The
+catalog is at `/catalog.json`; a snapshot is served from
+`/releases/<release-id>/`, including its PEP 503 index at
+`/releases/<release-id>/simple/`. Re-running the same release with identical
+contents is safe; reusing its ID for different contents is rejected.
+
+Before the first publication, set the repository's Pages source to **GitHub
+Actions** in Settings → Pages → Build and deployment. The repo is currently
+configured for the legacy `main` branch source; the publisher does not change
+repository settings automatically. The `gh-pages` branch is only durable
+release history, not the Pages build source.
+
 No physical device is required for the x86_64 smoke test. Full arm64-v8a import
 smoke coverage needs a runner that can provide a working Android ARM64
 emulator. See [`PHASE16.md`](PHASE16.md) for status, signing, yank, and rollback
@@ -103,8 +120,11 @@ creates the private key under your user profile. Add the exact private PEM text
 as the GitHub environment secret; do not commit or upload the private file as
 an Actions artifact. Then dispatch `Sign and promote wheel snapshot` from
 `main`, provide the run ID of a successful `Build and verify Android wheels`
-run on `main`, and choose a new release ID. The resulting artifact remains an
-unpublished review snapshot until a separately reviewed publisher is configured.
+run on `main`, and choose a new release ID. After that workflow succeeds,
+dispatch `Publish signed wheel snapshot to GitHub Pages` from `main` with the
+signing run ID and the same release ID. Approve the `github-pages` environment
+deployment. The publisher re-verifies the signed artifact before making it
+public.
 
 ```sh
 python scripts/sign_manifest.py sign dist/repository/manifest.json \
@@ -143,8 +163,8 @@ python scripts/yank_version.py unyank pyrun-native-probe 0.1.0
 - Pull-request workflows have read-only repository permissions and no signing
   credentials.
 - CI snapshots are temporary review artifacts, not a published package index.
-- A future Pages/release publisher must require a protected environment, a
-  valid signature, and a reviewed release action. It must remain separate from
-  the build workflow.
+- The Pages publisher is separate from the build and signing workflows. It
+  requires a protected environment, a valid signature, and a reviewed release
+  action; it never receives the private signing key.
 - Arbitrary pip packages, sdists, runtime native-wheel downloads, compilers,
   TensorFlow, PyTorch, OpenCV and SciPy are outside this proof package's scope.

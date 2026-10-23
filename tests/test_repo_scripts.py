@@ -25,6 +25,7 @@ import yaml
 from scripts.sign_manifest import main as sign_manifest_main, validate_manifest
 from scripts.generate_signing_key import generate_keypair
 from scripts.promote_snapshot import promote
+from scripts.prepare_pages_site import prepare_pages_site
 from scripts.yank_version import update_policy
 from scripts.compare_wheels import compare
 from scripts.stage_simple_index import stage
@@ -428,6 +429,126 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             snapshot_index.write_text(snapshot_index.read_text(encoding="utf-8") + "<!-- changed -->\n", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "hash mismatch"):
                 promote(snapshot, root / "tampered-release", public_key)
+
+    def test_pages_publisher_preserves_signed_releases_and_is_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wheel_dir = root / "wheels"
+            wheel_dir.mkdir()
+            make_wheel(wheel_dir, "x86_64")
+            make_wheel(wheel_dir, "arm64_v8a")
+            private_key = root / "private.pem"
+            public_key = root / "public.pem"
+            key = Ed25519PrivateKey.generate()
+            private_key.write_bytes(
+                key.private_bytes(
+                    serialization.Encoding.PEM,
+                    serialization.PrivateFormat.PKCS8,
+                    serialization.NoEncryption(),
+                )
+            )
+            public_key.write_bytes(
+                key.public_key().public_bytes(
+                    serialization.Encoding.PEM,
+                    serialization.PublicFormat.SubjectPublicKeyInfo,
+                )
+            )
+
+            def signed_snapshot(name: str, revision: str) -> Path:
+                snapshot = root / name
+                stage(wheel_dir, snapshot, revision * 40)
+                with patch.object(
+                    sys,
+                    "argv",
+                    ["sign_manifest.py", "sign", str(snapshot / "manifest.json"), "--private-key", str(private_key)],
+                ):
+                    sign_manifest_main()
+                return snapshot
+
+            first_snapshot = signed_snapshot("snapshot-1", "e")
+            site = root / "site"
+            prepare_pages_site(first_snapshot, site, "release-1", public_key)
+            first_manifest = (site / "releases" / "release-1" / "manifest.json").read_bytes()
+            prepare_pages_site(first_snapshot, site, "release-1", public_key)
+            self.assertEqual(
+                (site / "releases" / "release-1" / "manifest.json").read_bytes(),
+                first_manifest,
+            )
+
+            second_snapshot = signed_snapshot("snapshot-2", "f")
+            prepare_pages_site(second_snapshot, site, "release-2", public_key)
+            catalog = json.loads((site / "catalog.json").read_text(encoding="utf-8"))
+            self.assertEqual(catalog["latestRelease"], "release-2")
+            self.assertEqual([item["id"] for item in catalog["releases"]], ["release-1", "release-2"])
+            self.assertEqual(
+                (site / "releases" / "release-1" / "manifest.json").read_bytes(),
+                first_manifest,
+            )
+            self.assertIn("releases/release-2/", (site / "index.html").read_text(encoding="utf-8"))
+
+            with self.assertRaisesRegex(ValueError, "already exists with different contents"):
+                prepare_pages_site(second_snapshot, site, "release-1", public_key)
+
+    def test_pages_publisher_rejects_unsafe_release_ids_and_tampered_snapshots(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wheel_dir = root / "wheels"
+            wheel_dir.mkdir()
+            make_wheel(wheel_dir, "x86_64")
+            make_wheel(wheel_dir, "arm64_v8a")
+            snapshot = root / "snapshot"
+            stage(wheel_dir, snapshot, "a" * 40)
+            private_key = root / "private.pem"
+            public_key = root / "public.pem"
+            key = Ed25519PrivateKey.generate()
+            private_key.write_bytes(
+                key.private_bytes(
+                    serialization.Encoding.PEM,
+                    serialization.PrivateFormat.PKCS8,
+                    serialization.NoEncryption(),
+                )
+            )
+            public_key.write_bytes(
+                key.public_key().public_bytes(
+                    serialization.Encoding.PEM,
+                    serialization.PublicFormat.SubjectPublicKeyInfo,
+                )
+            )
+            with patch.object(
+                sys,
+                "argv",
+                ["sign_manifest.py", "sign", str(snapshot / "manifest.json"), "--private-key", str(private_key)],
+            ):
+                sign_manifest_main()
+            site = root / "site"
+            with self.assertRaisesRegex(ValueError, "release ID"):
+                prepare_pages_site(snapshot, site, "../escape", public_key)
+            (snapshot / "packages" / next((snapshot / "packages").iterdir()).name).write_bytes(b"tampered")
+            with self.assertRaisesRegex(ValueError, "hash mismatch"):
+                prepare_pages_site(snapshot, site, "release-1", public_key)
+
+    def test_publisher_workflow_is_manual_protected_and_pinned(self) -> None:
+        workflow_path = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "publish-pages.yml"
+        workflow = yaml.load(workflow_path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+        self.assertIn("workflow_dispatch", workflow["on"])
+        self.assertEqual(workflow["permissions"], {"actions": "read", "contents": "read"})
+        job = workflow["jobs"]["publish"]
+        self.assertEqual(job["if"], "github.ref == 'refs/heads/main'")
+        self.assertEqual(job["environment"]["name"], "github-pages")
+        self.assertEqual(
+            job["permissions"],
+            {"actions": "read", "contents": "write", "id-token": "write", "pages": "write"},
+        )
+        step_names = {step["name"] for step in job["steps"]}
+        self.assertIn("Validate the signed workflow run and release ID", step_names)
+        self.assertIn("Download the exact signed snapshot artifact", step_names)
+        self.assertIn("Verify signature, manifest, and every snapshot digest", step_names)
+        self.assertIn("Add release to the immutable Pages site history", step_names)
+        self.assertIn("Upload the cumulative static site", step_names)
+        self.assertIn("Deploy to GitHub Pages", step_names)
+        for step in job["steps"]:
+            if step.get("uses"):
+                self.assertRegex(step["uses"], r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[0-9a-f]{40}(?:\s+# .+)?$")
 
     def test_repeat_build_comparator_rejects_different_bytes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

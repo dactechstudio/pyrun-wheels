@@ -42,6 +42,12 @@ this phase does not mean arbitrary PyPI packages can be installed by PyRun.
   private PEM from a GitHub secret without writing it to disk, verifies the
   signature, promotes into a fresh directory, and uploads a signed review
   artifact. It has read-only GitHub permissions and never runs for PRs/pushes.
+- Separate, manual GitHub Pages publisher. It accepts only a successful signed
+  snapshot workflow run on `main`, waits for approval in the protected
+  `github-pages` environment, re-verifies the signature and all manifest
+  digests, preserves immutable releases in a durable `gh-pages` state branch,
+  and deploys a cumulative Pages artifact. Re-publication of the exact same
+  release is idempotent; different contents cannot reuse a release ID.
 - PEP 592 yank policy with reason, plus tests that build the corresponding
   `data-yanked` index entries.
 - Immutable snapshot staging and signed promotion/rollback into a fresh
@@ -67,18 +73,19 @@ Play-distributed app.
 
 ## Security boundary / remaining release setup
 
-The build workflow does not publish executable wheels to Pages or create a
-GitHub Release. The separate signing workflow produces a signed review artifact
-only. Before it can run, the owner must generate an Ed25519 keypair, commit the
-public key at `keys/pyrun-ed25519-public.pem`, and add the private PEM as the
-`PYRUN_ED25519_PRIVATE_KEY` secret in a protected GitHub environment named
-`wheel-release`. Configure required reviewers and restrict deployment branches
-to `main`. No production key was generated or stored by this repository work.
+The build workflow does not publish executable wheels directly. The signing
+workflow produces a signed review artifact, and the separate Pages publisher
+deploys only after approval. The repository owner generated the Ed25519 keypair
+and configured the private PEM as the `PYRUN_ED25519_PRIVATE_KEY` secret in the
+protected `wheel-release` environment; the private key is not stored in this
+repository.
 
 The consuming app must independently pin and verify the public key before
-trusting a repository snapshot. Public Pages/GitHub Release deployment remains
-unimplemented until the app-side trust policy and repository hosting procedure
-are reviewed. Never promote or consume an unsigned Actions artifact as trusted.
+trusting a repository snapshot. The Pages publisher requires the repository's
+Pages source to be set to GitHub Actions. At implementation time the site is
+still configured for the legacy `main` branch source, so the owner must switch
+this once under Settings → Pages before dispatching the publisher. Never
+promote or consume an unsigned Actions artifact as trusted.
 
 The x86_64 import smoke test is automated; the ARM64 wheel has build,
 repeatability and static ABI/ELF verification only until an emulator-capable
@@ -86,12 +93,21 @@ ARM64 test runner is available. The unsigned `simple-repository-snapshot` is a
 temporary build artifact for review; the signed workflow output is also a
 temporary review artifact, not a public package index.
 
-## Verification
+## Temporary checkpoint and verification
+
+The user has asked to provisionally close the Phase 16 implementation checkpoint
+and return to ARM64 emulator import coverage later. This is a deferred
+validation item, not a passing ARM64 test or a claim that the proof package
+matches a complete third-party Python package repository. The implemented
+checkpoint includes build/static checks, signed promotion, and protected Pages
+publication for the small probe package.
 
 Local Windows verification runs the repository unit tests, including keypair
-path protections, secret-environment signing, and release-workflow policy. The
-authoritative Android wheel builds and 16 KB checks run in GitHub Actions on the
-corresponding native-architecture runner. The x86_64 import check runs in the
-managed emulator; the GitHub-hosted macOS ARM emulator attempt failed, so ARM64
-import coverage is explicitly not claimed. Public deployment and live signing
-remain pending owner-provided key setup. Phase 17 is not started by this file.
+path protections, secret-environment signing, immutable Pages catalog behavior,
+and publisher workflow policy. The authoritative Android wheel builds and 16 KB
+checks run in GitHub Actions on the corresponding native-architecture runner.
+The x86_64 import check runs in the managed emulator; the GitHub-hosted macOS
+ARM emulator attempt failed, so ARM64 import coverage is explicitly deferred.
+The Pages workflow is implemented but cannot deploy until the owner switches
+the Pages source to GitHub Actions and dispatches an approved publication.
+Phase 17 is not started by this file.
