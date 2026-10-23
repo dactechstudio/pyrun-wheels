@@ -90,6 +90,21 @@ jobs:
         run: |
           "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install "emulator"
 
+      - name: Preserve NDK ELF tools before cibuildwheel cleanup
+        shell: bash
+        run: |
+          prebuilt="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt"
+          test -d "$prebuilt"
+          mkdir -p "$RUNNER_TEMP/pyrun-llvm-prebuilt"
+          cp -R "$prebuilt/." "$RUNNER_TEMP/pyrun-llvm-prebuilt/"
+          readelf="$(find "$RUNNER_TEMP/pyrun-llvm-prebuilt" -name llvm-readelf -print -quit)"
+          if [[ -z "$readelf" || ! -x "$readelf" ]]; then
+            echo "Could not preserve executable NDK llvm-readelf"
+            find "$RUNNER_TEMP/pyrun-llvm-prebuilt" -name llvm-readelf -print
+            exit 1
+          fi
+          echo "PYRUN_NDK_LLVM_READELF=$readelf" >> "$GITHUB_ENV"
+
       - name: Install pinned wheel tooling
         run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
 
@@ -120,14 +135,8 @@ jobs:
       - name: Verify wheel tags, ABI, hashes, and 16 KB ELF alignment
         shell: bash
         run: |
-          readelf="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -name llvm-readelf -print -quit)"
-          if [[ -z "$readelf" || ! -x "$readelf" ]]; then
-            echo "NDK llvm-readelf was not found or is not executable: $ANDROID_NDK_HOME"
-            find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -name llvm-readelf -print
-            exit 1
-          fi
           python scripts/verify_android_wheels.py wheelhouse-first/*.whl \
-            --expected-abi "${{ matrix.abi }}" --android-api 25 --readelf "$readelf"
+            --expected-abi "${{ matrix.abi }}" --android-api 25 --readelf "$PYRUN_NDK_LLVM_READELF"
 
       - name: Upload verified wheel
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0

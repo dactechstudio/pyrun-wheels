@@ -103,6 +103,12 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         ]
         self.assertEqual(len(emulator_setup), 1)
         self.assertEqual(emulator_setup[0]["run"].strip(), '"${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install "emulator"')
+        preserved_tools = [
+            step for step in workflow["jobs"]["build"]["steps"]
+            if step["name"] == "Preserve NDK ELF tools before cibuildwheel cleanup"
+        ]
+        self.assertEqual(len(preserved_tools), 1)
+        self.assertIn('cp -R "$prebuilt/." "$RUNNER_TEMP/pyrun-llvm-prebuilt/"', preserved_tools[0]["run"])
         recipe_path = (
             Path(__file__).resolve().parents[1]
             / "recipes"
@@ -111,16 +117,19 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         )
         recipe = tomllib.loads(recipe_path.read_text(encoding="utf-8"))
         self.assertEqual(recipe["tool"]["cibuildwheel"]["android"]["test-runtime"]["args"], ["--managed", "maxVersion"])
-        for job in workflow["jobs"].values():
-            for step in job.get("steps", []):
-                if step["name"] in {
-                    "Verify wheel tags, ABI, hashes, and 16 KB ELF alignment",
-                    "Re-verify both ABI artifacts and stage snapshot",
-                }:
-                    self.assertIn(
-                        'find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -name llvm-readelf',
-                        step["run"],
-                    )
+        build_verify = next(
+            step for step in workflow["jobs"]["build"]["steps"]
+            if step["name"] == "Verify wheel tags, ABI, hashes, and 16 KB ELF alignment"
+        )
+        self.assertIn("$PYRUN_NDK_LLVM_READELF", build_verify["run"])
+        stage_verify = next(
+            step for step in workflow["jobs"]["stage-index"]["steps"]
+            if step["name"] == "Re-verify both ABI artifacts and stage snapshot"
+        )
+        self.assertIn(
+            'find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -name llvm-readelf',
+            stage_verify["run"],
+        )
 
     def test_verifies_abi_machine_hash_and_16kb_load_alignment(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
