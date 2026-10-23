@@ -23,7 +23,7 @@
   "patches": [
     {
       "path": "scripts/prepare_opencv_source.py",
-      "sha256": "a94107d46dfd55b050bd0e5240e98f9c771e707f78698ae2752fb8becfe70d7f"
+      "sha256": "2186c55a95d8302d265b142f680a22d6964b9dc6cee916bbdc615a80598fa250"
     }
   ],
   "runtime_dependencies": ["numpy>=1.26.0,<2"],

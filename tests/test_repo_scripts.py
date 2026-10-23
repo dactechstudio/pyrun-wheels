@@ -174,6 +174,9 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         self.assertEqual(set(recipe["abis"]), {"arm64_v8a", "x86_64"})
         self.assertEqual(recipe["build"]["numpy"], "1.26.2")
         self.assertEqual(recipe["release_status"], "experimental")
+        prepare_source = (root / "scripts" / "prepare_opencv_source.py").read_text(encoding="utf-8")
+        self.assertIn('"sdk/etc" if "CIBUILDWHEEL_BUILD_IDENTIFIER" in os.environ', prepare_source)
+        self.assertIn('r"/haarcascades/.*\\\\.xml"', prepare_source)
         patch = recipe["patches"][0]
         self.assertEqual(
             hashlib.sha256((root / patch["path"]).read_bytes()).hexdigest(),

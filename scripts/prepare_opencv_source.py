@@ -89,6 +89,11 @@ def prepare(destination: Path) -> None:
     setup = destination / "setup.py"
     replace_once(
         setup,
+        '            ("etc" if os.name == "nt" else "share/opencv4") + r"/haarcascades/.*\\.xml"',
+        '            ("etc" if os.name == "nt" else ("sdk/etc" if "CIBUILDWHEEL_BUILD_IDENTIFIER" in os.environ else "share/opencv4")) + r"/haarcascades/.*\\.xml"',
+    )
+    replace_once(
+        setup,
         "import platform\nfrom skbuild import cmaker, setup",
         "import platform\nimport numpy\nfrom skbuild import cmaker, setup",
     )
