@@ -19,7 +19,8 @@ this phase does not mean arbitrary PyPI packages can be installed by PyRun.
 - Repeat-build comparison using the same commit timestamp via
   `SOURCE_DATE_EPOCH`.
 - Automated native import smoke test for the `x86_64` wheel in a managed
-  Android emulator on GitHub Actions Linux x86_64. No physical device is used.
+  Android emulator on GitHub Actions Linux x86_64, targeting the latest managed
+  Android version available to the test runner. No physical device is used.
 - The `arm64-v8a` wheel is built twice and checked for ABI, hashes and 16 KB ELF
   alignment on a native macOS ARM runner. Its managed emulator import test is
   currently unavailable on GitHub-hosted macOS: the first CI attempt could not

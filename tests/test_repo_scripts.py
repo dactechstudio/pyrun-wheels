@@ -103,6 +103,24 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         ]
         self.assertEqual(len(emulator_setup), 1)
         self.assertEqual(emulator_setup[0]["run"].strip(), '"${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install "emulator"')
+        recipe_path = (
+            Path(__file__).resolve().parents[1]
+            / "recipes"
+            / "native_probe"
+            / "pyproject.toml"
+        )
+        recipe = tomllib.loads(recipe_path.read_text(encoding="utf-8"))
+        self.assertEqual(recipe["tool"]["cibuildwheel"]["android"]["test-runtime"]["args"], ["--managed", "maxVersion"])
+        for job in workflow["jobs"].values():
+            for step in job.get("steps", []):
+                if step["name"] in {
+                    "Verify wheel tags, ABI, hashes, and 16 KB ELF alignment",
+                    "Re-verify both ABI artifacts and stage snapshot",
+                }:
+                    self.assertIn(
+                        'find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -name llvm-readelf',
+                        step["run"],
+                    )
 
     def test_verifies_abi_machine_hash_and_16kb_load_alignment(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

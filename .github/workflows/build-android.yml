@@ -120,8 +120,12 @@ jobs:
       - name: Verify wheel tags, ABI, hashes, and 16 KB ELF alignment
         shell: bash
         run: |
-          readelf="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -type f -name llvm-readelf -print -quit)"
-          test -n "$readelf"
+          readelf="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -name llvm-readelf -print -quit)"
+          if [[ -z "$readelf" || ! -x "$readelf" ]]; then
+            echo "NDK llvm-readelf was not found or is not executable: $ANDROID_NDK_HOME"
+            find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -name llvm-readelf -print
+            exit 1
+          fi
           python scripts/verify_android_wheels.py wheelhouse-first/*.whl \
             --expected-abi "${{ matrix.abi }}" --android-api 25 --readelf "$readelf"
 
@@ -178,8 +182,12 @@ jobs:
       - name: Re-verify both ABI artifacts and stage snapshot
         shell: bash
         run: |
-          readelf="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -type f -name llvm-readelf -print -quit)"
-          test -n "$readelf"
+          readelf="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -name llvm-readelf -print -quit)"
+          if [[ -z "$readelf" || ! -x "$readelf" ]]; then
+            echo "NDK llvm-readelf was not found or is not executable: $ANDROID_NDK_HOME"
+            find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -name llvm-readelf -print
+            exit 1
+          fi
           python scripts/verify_android_wheels.py wheelhouse/*.whl \
             --android-api 25 --readelf "$readelf"
           python scripts/stage_simple_index.py \

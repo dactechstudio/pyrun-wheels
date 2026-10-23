@@ -28,7 +28,8 @@ Every push and pull request runs the repository tests, builds both ABI wheels,
 verifies repeatability, wheel tags, hashes and ELF alignment, and stages an
 unsigned Simple Repository snapshot. The x86_64 wheel also gets a native import
 smoke test in cibuildwheel's managed Android emulator on the GitHub-hosted
-Linux x86_64 runner. The arm64-v8a wheel is built and statically verified on a
+Linux x86_64 runner using the latest managed Android version available to the
+test runner. The arm64-v8a wheel is built and statically verified on a
 native macOS ARM runner, but its managed emulator test is skipped: the current
 hosted macOS runner could not start that emulator, and cibuildwheel documents
 GitHub Actions Linux x86_64 as its supported hosted Android-emulator
