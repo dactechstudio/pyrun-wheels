@@ -1,0 +1,126 @@
+{
+  "androidMinApi": 25,
+  "artifacts": [
+    {
+      "abi": "arm64_v8a",
+      "androidApi": 25,
+      "filename": "opencv_python_headless-4.11.0.86-cp313-cp313-android_25_arm64_v8a.whl",
+      "license": "Apache-2.0",
+      "name": "opencv-python-headless",
+      "patches": [
+        {
+          "path": "scripts/prepare_opencv_source.py",
+          "sha256": "2186c55a95d8302d265b142f680a22d6964b9dc6cee916bbdc615a80598fa250"
+        }
+      ],
+      "playRuntimeInstallAllowed": false,
+      "pythonTag": "cp313-cp313",
+      "recipePath": "recipes/opencv_python/recipe.json",
+      "recipeSha256": "e914736342fba305e6f54cc5083cf92d8f45538d0d564474b72a6455ede0fc71",
+      "sbomPath": "sbom/opencv-python-headless.cdx.json",
+      "sbomSha256": "6e28a78c1b0450920dfeab300dd3fccbc78f41bec53ec5b8d7fd593ca3962088",
+      "sha256": "c94fdbab6e93256077215ecd6594dab7f904935f90a307b5f0e1dbde45adc73c",
+      "sourceTreeSha256": "68302e9dceae280024af6276b7c9e9659c017d11411c2c7e635c5469c5f45959",
+      "sourceUrl": "https://github.com/opencv/opencv-python/tree/255564a37c4a23275485e827abbe19031347d458",
+      "upstreamRevision": "255564a37c4a23275485e827abbe19031347d458",
+      "upstreamSubmodules": {
+        "opencv": "31b0eeea0b44b370fd0712312df4214d4ae1b158"
+      },
+      "url": "packages/opencv_python_headless-4.11.0.86-cp313-cp313-android_25_arm64_v8a.whl",
+      "version": "4.11.0.86",
+      "yanked": false
+    },
+    {
+      "abi": "x86_64",
+      "androidApi": 25,
+      "filename": "opencv_python_headless-4.11.0.86-cp313-cp313-android_25_x86_64.whl",
+      "license": "Apache-2.0",
+      "name": "opencv-python-headless",
+      "patches": [
+        {
+          "path": "scripts/prepare_opencv_source.py",
+          "sha256": "2186c55a95d8302d265b142f680a22d6964b9dc6cee916bbdc615a80598fa250"
+        }
+      ],
+      "playRuntimeInstallAllowed": false,
+      "pythonTag": "cp313-cp313",
+      "recipePath": "recipes/opencv_python/recipe.json",
+      "recipeSha256": "e914736342fba305e6f54cc5083cf92d8f45538d0d564474b72a6455ede0fc71",
+      "sbomPath": "sbom/opencv-python-headless.cdx.json",
+      "sbomSha256": "6e28a78c1b0450920dfeab300dd3fccbc78f41bec53ec5b8d7fd593ca3962088",
+      "sha256": "bd054570b9eebd512014fef5b4e35b80e6e37851462c25a8c852b09e642ee503",
+      "sourceTreeSha256": "68302e9dceae280024af6276b7c9e9659c017d11411c2c7e635c5469c5f45959",
+      "sourceUrl": "https://github.com/opencv/opencv-python/tree/255564a37c4a23275485e827abbe19031347d458",
+      "upstreamRevision": "255564a37c4a23275485e827abbe19031347d458",
+      "upstreamSubmodules": {
+        "opencv": "31b0eeea0b44b370fd0712312df4214d4ae1b158"
+      },
+      "url": "packages/opencv_python_headless-4.11.0.86-cp313-cp313-android_25_x86_64.whl",
+      "version": "4.11.0.86",
+      "yanked": false
+    },
+    {
+      "abi": "arm64_v8a",
+      "androidApi": 25,
+      "filename": "pyrun_native_probe-0.1.0-cp313-cp313-android_25_arm64_v8a.whl",
+      "license": "MIT",
+      "name": "pyrun-native-probe",
+      "patches": [],
+      "playRuntimeInstallAllowed": false,
+      "pythonTag": "cp313-cp313",
+      "recipePath": "recipes/native_probe/recipe.json",
+      "recipeSha256": "ed39bc83decc410a5cbf97b398591afbbabad5712b02c59875663e40f1fd12f7",
+      "sbomPath": "sbom/pyrun-native-probe.cdx.json",
+      "sbomSha256": "3f6dd9c4023bc5be75f8d245c987bac7607ed73fac4bde4a8b9052a2603445f5",
+      "sha256": "e68e6f656a8d835b33b30f43d48d8df39fd5c80e69670bb8f3c8bfbe16c91f62",
+      "sourceTreeSha256": "94ff17a033f1fe822a44783f15ac6cd3e4448043c43ca8a1427e8c7efde1c812",
+      "sourceUrl": "https://github.com/dactechstudio/pyrun-wheels/tree/f8c0462f1ab16c3d74f9842468455c35dca5b433/recipes/native_probe",
+      "url": "packages/pyrun_native_probe-0.1.0-cp313-cp313-android_25_arm64_v8a.whl",
+      "version": "0.1.0",
+      "yanked": false
+    },
+    {
+      "abi": "x86_64",
+      "androidApi": 25,
+      "filename": "pyrun_native_probe-0.1.0-cp313-cp313-android_25_x86_64.whl",
+      "license": "MIT",
+      "name": "pyrun-native-probe",
+      "patches": [],
+      "playRuntimeInstallAllowed": false,
+      "pythonTag": "cp313-cp313",
+      "recipePath": "recipes/native_probe/recipe.json",
+      "recipeSha256": "ed39bc83decc410a5cbf97b398591afbbabad5712b02c59875663e40f1fd12f7",
+      "sbomPath": "sbom/pyrun-native-probe.cdx.json",
+      "sbomSha256": "3f6dd9c4023bc5be75f8d245c987bac7607ed73fac4bde4a8b9052a2603445f5",
+      "sha256": "07244fbf241a08fcf03e2c36f89a0715b366e47d82a0ba93e2432b6c3a48efce",
+      "sourceTreeSha256": "94ff17a033f1fe822a44783f15ac6cd3e4448043c43ca8a1427e8c7efde1c812",
+      "sourceUrl": "https://github.com/dactechstudio/pyrun-wheels/tree/f8c0462f1ab16c3d74f9842468455c35dca5b433/recipes/native_probe",
+      "url": "packages/pyrun_native_probe-0.1.0-cp313-cp313-android_25_x86_64.whl",
+      "version": "0.1.0",
+      "yanked": false
+    }
+  ],
+  "ndkVersion": "30.0.16248370",
+  "pythonVersion": "3.13",
+  "schemaVersion": 1,
+  "simpleIndexes": [
+    {
+      "name": "root",
+      "path": "index.html",
+      "sha256": "4d972d8e4b5f18ea0aafb570bbc8116888d4713f4b9b3de6e9f02d784685954b"
+    },
+    {
+      "name": "opencv-python-headless",
+      "path": "simple/opencv-python-headless/index.html",
+      "sha256": "9af03fb01fa86b07f6bad6f5b6c4d7d04c5a6120bd392ecbdf3ce27f86723ae2"
+    },
+    {
+      "name": "pyrun-native-probe",
+      "path": "simple/pyrun-native-probe/index.html",
+      "sha256": "3164980e9805af4e6a4892cb598cdf3ac0b2ed012a47c963c02c347560110418"
+    }
+  ],
+  "sourceRevision": "f8c0462f1ab16c3d74f9842468455c35dca5b433",
+  "toolchainPath": "toolchain.lock",
+  "toolchainSha256": "318c9843aade8b5b78c43a6d6b93f88297ef1488f390ab6ba3ef895be4477d73"
+}

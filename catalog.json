@@ -1,5 +1,5 @@
 {
-  "latestRelease": "2026-10-23-3",
+  "latestRelease": "opencv-4.11.0.86-20261024",
   "releases": [
     {
       "id": "2026-10-23-3",
@@ -7,6 +7,13 @@
       "manifestSha256": "7bad4b4536d971bca5ec4dbbbab3df6e563dc239ed7088f566d3930c20e4af4e",
       "path": "releases/2026-10-23-3/",
       "signature": "releases/2026-10-23-3/manifest.json.sig"
+    },
+    {
+      "id": "opencv-4.11.0.86-20261024",
+      "manifest": "releases/opencv-4.11.0.86-20261024/manifest.json",
+      "manifestSha256": "dbb10f0d0cdba4482249e7cc6f6b2c534896ba868bca0bc993b2ae4bcb65206e",
+      "path": "releases/opencv-4.11.0.86-20261024/",
+      "signature": "releases/opencv-4.11.0.86-20261024/manifest.json.sig"
     }
   ],
   "schemaVersion": 1
