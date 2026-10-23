@@ -2,18 +2,21 @@
 
 This recipe builds the upstream OpenCV-Python 4.11.0.86 source for CPython 3.13
 and Android API 25. It pins the upstream wrapper commit and OpenCV submodule
-commit in `recipe.json`; `scripts/prepare_opencv_source.py` verifies both before
-applying the Android Python-binding adaptations.
+commit in recipe.json; scripts/prepare_opencv_source.py verifies both before
+applying the Android Python-binding adaptations. Release build run
+39987784445 produced wheels for arm64_v8a and x86_64.
 
-The intended distribution is `opencv-python-headless`; Python code imports it
-as `cv2`. The headless build omits desktop GUI integrations and optional
-external codecs such as FFmpeg, while retaining OpenCV's built-in JPEG/PNG
-support. It is an optional package and must not be included in the app build
-until both ABI wheels have been built, reviewed, signed, and published.
+The intended distribution is opencv-python-headless; Python code imports it as
+cv2. The headless build omits desktop GUI integrations and optional external
+codecs such as FFmpeg, while retaining built-in image codecs. The package uses
+the app's pinned NumPy 1.26.2 ABI.
 
-The package uses the app's pinned NumPy 1.26.2 ABI. This recipe is build-only:
-no OpenCV wheel has been produced or import-tested yet. Emulator/device
-execution is intentionally not part of this workflow unless explicitly
-enabled by a maintainer. Its `release_status` is `experimental`, so the signing
-tool refuses to sign snapshots containing it until a reviewed change marks the
-recipe approved after ABI, contents, and license/SBOM checks.
+CI verified both wheel tags, native ELF architecture, 16 KB load alignment,
+package RECORD hashes, and the expected cv2 module and cascade data. The wheel
+includes OpenCV's LICENSE.txt and LICENSE-3RD-PARTY.txt; the CycloneDX SBOM
+records the third-party components identified in the native build.
+
+No emulator or device import smoke test was run. Keep OpenCV opt-in in the app
+until runtime validation is performed on supported Android ABIs. The recipe is
+approved for publication to the signed wheel index, not enabled by default in
+the app or approved for runtime installation through Google Play.

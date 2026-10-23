@@ -5,7 +5,7 @@
   "android_api_min": 25,
   "abis": ["arm64_v8a", "x86_64"],
   "license": "Apache-2.0",
-  "release_status": "experimental",
+  "release_status": "approved",
   "source_url": "https://github.com/opencv/opencv-python",
   "source_revision": "255564a37c4a23275485e827abbe19031347d458",
   "source_submodules": {

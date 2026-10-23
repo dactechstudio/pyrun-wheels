@@ -1,13 +1,17 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
-  "serialNumber": "urn:uuid:07f14a41-9f8c-497d-a3da-83d40b58ef4a",
-  "version": 1,
+  "serialNumber": "urn:uuid:3451cc56-0e46-412b-a6c6-f76a5bb0ce52",
+  "version": 2,
   "metadata": {
     "properties": [
       {
         "name": "pyrun:release-status",
-        "value": "experimental; pending Android wheel and license review"
+        "value": "approved for publication after both-ABI, ELF-alignment, package-content, and bundled-license checks; Android import smoke test not run"
+      },
+      {
+        "name": "pyrun:source-build-run-id",
+        "value": "39987784445"
       }
     ],
     "component": {
@@ -39,6 +43,87 @@
       "version": "1.26.2",
       "licenses": [{ "license": { "id": "BSD-3-Clause" } }],
       "purl": "pkg:pypi/numpy@1.26.2"
+    },
+    {
+      "type": "library",
+      "name": "Android NDK cpufeatures",
+      "version": "30.0.16248370",
+      "licenses": [{ "license": { "id": "BSD-3-Clause" } }],
+      "purl": "pkg:generic/android-ndk-cpufeatures@30.0.16248370"
+    },
+    {
+      "type": "library",
+      "name": "ADE",
+      "version": "0.1.2e",
+      "licenses": [{ "license": { "id": "Apache-2.0" } }],
+      "purl": "pkg:github/opencv/ade@0.1.2e"
+    },
+    {
+      "type": "library",
+      "name": "libjpeg-turbo",
+      "version": "3.0.3-70",
+      "licenses": [
+        {
+          "license": {
+            "name": "Three compatible BSD-style licenses; details in the bundled LICENSE-3RD-PARTY.txt"
+          }
+        }
+      ],
+      "purl": "pkg:github/libjpeg-turbo/libjpeg-turbo@3.0.3-70"
+    },
+    {
+      "type": "library",
+      "name": "libpng",
+      "version": "1.6.43",
+      "licenses": [{ "license": { "id": "libpng-2.0" } }],
+      "purl": "pkg:github/glennrp/libpng@1.6.43"
+    },
+    {
+      "type": "library",
+      "name": "OpenJPEG",
+      "licenses": [{ "license": { "id": "BSD-2-Clause" } }],
+      "purl": "pkg:generic/openjpeg"
+    },
+    {
+      "type": "library",
+      "name": "zlib",
+      "version": "1.3.1",
+      "licenses": [{ "license": { "id": "Zlib" } }],
+      "purl": "pkg:generic/zlib@1.3.1"
+    },
+    {
+      "type": "library",
+      "name": "Protocol Buffers",
+      "version": "3.19.1",
+      "licenses": [{ "license": { "id": "BSD-3-Clause" } }],
+      "purl": "pkg:github/protocolbuffers/protobuf@3.19.1"
+    },
+    {
+      "type": "library",
+      "name": "FlatBuffers",
+      "version": "23.5.9",
+      "licenses": [{ "license": { "id": "Apache-2.0" } }],
+      "purl": "pkg:github/google/flatbuffers@23.5.9"
+    },
+    {
+      "type": "library",
+      "name": "QUIRC",
+      "licenses": [{ "license": { "id": "ISC" } }],
+      "purl": "pkg:github/dlbeer/quirc"
+    },
+    {
+      "type": "library",
+      "name": "Android libc++ shared runtime",
+      "version": "30.0.16248370",
+      "licenses": [{ "license": { "expression": "Apache-2.0 WITH LLVM-exception" } }],
+      "purl": "pkg:generic/android-ndk-libcxx@30.0.16248370"
+    },
+    {
+      "type": "library",
+      "name": "OpenCV Tegra HAL",
+      "licenses": [{ "license": { "id": "Apache-2.0" } }],
+      "purl": "pkg:generic/opencv-tegra-hal",
+      "properties": [{ "name": "pyrun:abi", "value": "arm64_v8a" }]
     }
   ],
   "dependencies": [
@@ -47,7 +132,23 @@
       "dependsOn": [
         "pkg:pypi/opencv-python@4.11.0.86",
         "pkg:github/opencv/opencv@4.11.0",
-        "pkg:pypi/numpy@1.26.2"
+        "pkg:pypi/numpy@1.26.2",
+        "pkg:generic/android-ndk-libcxx@30.0.16248370"
+      ]
+    },
+    {
+      "ref": "pkg:github/opencv/opencv@4.11.0",
+      "dependsOn": [
+        "pkg:generic/android-ndk-cpufeatures@30.0.16248370",
+        "pkg:github/opencv/ade@0.1.2e",
+        "pkg:github/libjpeg-turbo/libjpeg-turbo@3.0.3-70",
+        "pkg:github/glennrp/libpng@1.6.43",
+        "pkg:generic/openjpeg",
+        "pkg:generic/zlib@1.3.1",
+        "pkg:github/protocolbuffers/protobuf@3.19.1",
+        "pkg:github/google/flatbuffers@23.5.9",
+        "pkg:github/dlbeer/quirc",
+        "pkg:generic/opencv-tegra-hal"
       ]
     }
   ]

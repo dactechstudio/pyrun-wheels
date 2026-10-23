@@ -16,6 +16,11 @@ on:
         required: true
         type: boolean
         default: true
+      restage_from_build_run_id:
+        description: Re-stage previously verified wheel artifacts after recipe or SBOM review, without rebuilding
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -41,6 +46,7 @@ jobs:
 
   build:
     name: CPython 3.13 · ${{ matrix.abi }}
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.restage_from_build_run_id == '' }}
     needs: test
     strategy:
       fail-fast: false
@@ -181,6 +187,7 @@ jobs:
 
   stage-index:
     name: Stage unsigned, unpublished Simple Repository
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.restage_from_build_run_id == '' }}
     needs: build
     runs-on: ubuntu-24.04
     permissions:
@@ -238,6 +245,106 @@ jobs:
             --source-revision "$GITHUB_SHA"
 
       - name: Upload unsigned snapshot for review
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: simple-repository-snapshot
+          path: dist/repository
+          if-no-files-found: error
+          retention-days: 14
+
+  restage-index:
+    name: Re-stage reviewed wheel artifacts without rebuilding
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.restage_from_build_run_id != '' }}
+    needs: test
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_BUILD_RUN_ID: ${{ inputs.restage_from_build_run_id }}
+    steps:
+      - name: Check out reviewed repository metadata
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Set up CPython
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.13.17"
+
+      - name: Set up pinned Java runtime
+        uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Validate successful source build run
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_BUILD_RUN_ID" =~ ^[0-9]{1,20}$ ]] || {
+            echo "restage_from_build_run_id must be a numeric GitHub Actions run ID" >&2
+            exit 1
+          }
+          metadata="$(gh run view "$SOURCE_BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --json workflowName,headBranch,event,status,conclusion,headSha)"
+          printf '%s' "$metadata" | jq -e '
+            .workflowName == "Build and verify Android wheels" and
+            .headBranch == "main" and
+            (.event == "push" or .event == "workflow_dispatch") and
+            .status == "completed" and
+            .conclusion == "success" and
+            (.headSha | test("^[0-9a-f]{40}$"))
+          ' >/dev/null || {
+            echo "The source run must be a successful Android wheel build on main" >&2
+            exit 1
+          }
+          echo "SOURCE_BUILD_SHA=$(printf '%s' "$metadata" | jq -r '.headSha')" >> "$GITHUB_ENV"
+
+      - name: Download exact wheel artifacts from the source build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p downloaded-wheels wheelhouse
+          gh run download "$SOURCE_BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --pattern 'wheels-*' --dir downloaded-wheels
+          find downloaded-wheels -type f -name '*.whl' -exec cp -n {} wheelhouse/ \;
+          test "$(find wheelhouse -maxdepth 1 -type f -name '*.whl' | wc -l)" -eq 4
+          for abi in arm64_v8a x86_64; do
+            test -f "wheelhouse/pyrun_native_probe-0.1.0-cp313-cp313-android_25_"$abi".whl"
+            test -f "wheelhouse/opencv_python_headless-4.11.0.86-cp313-cp313-android_25_"$abi".whl"
+          done
+
+      - name: Install pinned Android NDK
+        shell: bash
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$sdkmanager"
+          set +o pipefail
+          yes | "$sdkmanager" --licenses >/dev/null
+          set -o pipefail
+          "$sdkmanager" --install "ndk;30.0.16248370"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/30.0.16248370" >> "$GITHUB_ENV"
+
+      - name: Install pinned repository tooling
+        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
+
+      - name: Re-verify wheel artifacts and stage reviewed snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          readelf="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -name llvm-readelf -print -quit)"
+          test -n "$readelf" && test -x "$readelf"
+          for abi in arm64_v8a x86_64; do
+            python scripts/verify_android_wheels.py wheelhouse/*android_25_"$abi".whl \
+              --expected-abi "$abi" --android-api 25 --readelf "$readelf"
+          done
+          python scripts/stage_simple_index.py \
+            --wheel-dir wheelhouse \
+            --output-dir dist/repository \
+            --source-revision "$SOURCE_BUILD_SHA"
+
+      - name: Upload unsigned snapshot for signing
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: simple-repository-snapshot

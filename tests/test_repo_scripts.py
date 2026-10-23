@@ -115,6 +115,29 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             workflow["on"]["workflow_dispatch"]["inputs"]["build_opencv"]["default"],
             "true",
         )
+        self.assertEqual(
+            workflow["on"]["workflow_dispatch"]["inputs"]["restage_from_build_run_id"]["default"],
+            "",
+        )
+        self.assertEqual(
+            workflow["jobs"]["build"]["if"],
+            "${{ github.event_name != 'workflow_dispatch' || inputs.restage_from_build_run_id == '' }}",
+        )
+        restage = workflow["jobs"]["restage-index"]
+        self.assertEqual(
+            restage["if"],
+            "${{ github.event_name == 'workflow_dispatch' && inputs.restage_from_build_run_id != '' }}",
+        )
+        self.assertEqual(restage["needs"], "test")
+        self.assertEqual(restage["permissions"], {"actions": "read", "contents": "read"})
+        restage_steps = {step["name"]: step for step in restage["steps"]}
+        self.assertIn("gh run download", restage_steps["Download exact wheel artifacts from the source build"]["run"])
+        self.assertIn("verify_android_wheels.py", restage_steps["Re-verify wheel artifacts and stage reviewed snapshot"]["run"])
+        self.assertIn("stage_simple_index.py", restage_steps["Re-verify wheel artifacts and stage reviewed snapshot"]["run"])
+        self.assertEqual(
+            restage_steps["Upload unsigned snapshot for signing"]["with"]["name"],
+            "simple-repository-snapshot",
+        )
         emulator_setup = [
             step for step in workflow["jobs"]["build"]["steps"]
             if step["name"] == "Install Android emulator on supported Linux CI runner"
@@ -173,7 +196,17 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         self.assertEqual(recipe["source_submodules"]["opencv"], "31b0eeea0b44b370fd0712312df4214d4ae1b158")
         self.assertEqual(set(recipe["abis"]), {"arm64_v8a", "x86_64"})
         self.assertEqual(recipe["build"]["numpy"], "1.26.2")
-        self.assertEqual(recipe["release_status"], "experimental")
+        self.assertEqual(recipe["release_status"], "approved")
+        sbom = json.loads(
+            (root / recipe["sbom"]).read_text(encoding="utf-8")
+        )
+        sbom_components = {component["name"] for component in sbom["components"]}
+        self.assertIn("OpenJPEG", sbom_components)
+        self.assertIn("Android libc++ shared runtime", sbom_components)
+        self.assertTrue(
+            any(prop["name"] == "pyrun:source-build-run-id" and prop["value"] == "39987784445"
+                for prop in sbom["metadata"]["properties"])
+        )
         prepare_source = (root / "scripts" / "prepare_opencv_source.py").read_text(encoding="utf-8")
         self.assertIn('"sdk/etc" if "CIBUILDWHEEL_BUILD_IDENTIFIER" in os.environ', prepare_source)
         self.assertIn('r"/haarcascades/.*\\\\.xml"', prepare_source)
@@ -213,8 +246,7 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             self.assertTrue(index.is_file())
             self.assertEqual(index.read_text(encoding="utf-8").count("<a href="), 2)
             self.assertTrue((output / "scripts" / "prepare_opencv_source.py").is_file())
-            with self.assertRaisesRegex(ValueError, "recipe is not approved for publication: opencv-python-headless"):
-                validate_manifest(output / "manifest.json")
+            validate_manifest(output / "manifest.json")
 
     def test_signing_workflow_is_separate_manual_protected_and_read_only(self) -> None:
         workflow_path = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "sign-snapshot.yml"
