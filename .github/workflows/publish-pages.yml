@@ -52,6 +52,9 @@ jobs:
       - name: Install pinned repository tooling
         run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
 
+      - name: Configure GitHub credentials for state-branch pushes
+        run: gh auth setup-git
+
       - name: Validate the signed workflow run and release ID
         shell: bash
         run: |

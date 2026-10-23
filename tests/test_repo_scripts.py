@@ -540,6 +540,7 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             {"actions": "read", "contents": "write", "id-token": "write", "pages": "write"},
         )
         step_names = {step["name"] for step in job["steps"]}
+        self.assertIn("Configure GitHub credentials for state-branch pushes", step_names)
         self.assertIn("Validate the signed workflow run and release ID", step_names)
         self.assertIn("Download the exact signed snapshot artifact", step_names)
         self.assertIn("Verify signature, manifest, and every snapshot digest", step_names)
