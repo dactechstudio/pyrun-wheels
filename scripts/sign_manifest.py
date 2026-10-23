@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""Sign or verify an exact repository manifest using OpenSSL Ed25519."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import subprocess
+import tempfile
+from pathlib import Path, PurePosixPath
+
+from jsonschema import validate
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def validate_manifest(manifest_path: Path) -> dict:
+    manifest_path = manifest_path.resolve(strict=True)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    schema = json.loads((ROOT / "schemas" / "repository-manifest.schema.json").read_text(encoding="utf-8"))
+    validate(instance=manifest, schema=schema)
+    manifest_root = manifest_path.parent.resolve(strict=True)
+
+    def resolve_artifact(relative_path: str) -> Path:
+        relative = PurePosixPath(relative_path)
+        if relative.is_absolute() or any(part in ("", ".", "..") for part in relative.parts):
+            raise ValueError(f"unsafe manifest artifact path: {relative_path}")
+        resolved = manifest_root.joinpath(*relative.parts).resolve(strict=True)
+        if not resolved.is_relative_to(manifest_root) or not resolved.is_file():
+            raise ValueError(f"manifest artifact escapes repository root: {relative_path}")
+        return resolved
+
+    def verify_hash(relative_path: str, expected_digest: str) -> None:
+        artifact_path = resolve_artifact(relative_path)
+        digest = hashlib.sha256()
+        with artifact_path.open("rb") as source:
+            for block in iter(lambda: source.read(1024 * 1024), b""):
+                digest.update(block)
+        if digest.hexdigest() != expected_digest:
+            raise ValueError(f"manifest hash mismatch: {relative_path}")
+
+    for artifact in manifest["artifacts"]:
+        verify_hash(artifact["url"], artifact["sha256"])
+        verify_hash(artifact["recipePath"], artifact["recipeSha256"])
+        verify_hash(artifact["sbomPath"], artifact["sbomSha256"])
+    return manifest
+
+
+def run_openssl(arguments: list[str]) -> None:
+    subprocess.run(["openssl", *arguments], check=True)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="mode", required=True)
+    sign = subparsers.add_parser("sign")
+    sign.add_argument("manifest", type=Path)
+    sign.add_argument("--private-key", required=True, type=Path)
+    sign.add_argument("--signature", type=Path)
+    verify = subparsers.add_parser("verify")
+    verify.add_argument("manifest", type=Path)
+    verify.add_argument("--public-key", required=True, type=Path)
+    verify.add_argument("--signature", required=True, type=Path)
+    args = parser.parse_args()
+    validate_manifest(args.manifest)
+
+    if args.mode == "sign":
+        signature = args.signature or args.manifest.with_suffix(args.manifest.suffix + ".sig")
+        signature.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(prefix="pyrun-signature-", dir=signature.parent, delete=False) as output:
+            temporary = Path(output.name)
+        try:
+            run_openssl(
+                ["pkeyutl", "-sign", "-rawin", "-inkey", str(args.private_key), "-in", str(args.manifest), "-out", str(temporary)]
+            )
+            temporary.replace(signature)
+        finally:
+            temporary.unlink(missing_ok=True)
+        print(f"Signed {args.manifest.name} -> {signature.name}")
+        return 0
+
+    run_openssl(
+        [
+            "pkeyutl",
+            "-verify",
+            "-rawin",
+            "-pubin",
+            "-inkey",
+            str(args.public_key),
+            "-in",
+            str(args.manifest),
+            "-sigfile",
+            str(args.signature),
+        ]
+    )
+    print(f"Verified {args.manifest.name}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

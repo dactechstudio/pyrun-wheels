@@ -1,0 +1,7 @@
+python = "3.13"
+ndk = "30.0.16248370"
+android_api = 25
+cibuildwheel = "4.3.1"
+setuptools = "80.9.0"
+wheel = "0.45.1"
+packaging = "25.0"

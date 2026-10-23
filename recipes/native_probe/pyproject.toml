@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools==80.9.0", "wheel==0.45.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyrun-native-probe"
+version = "0.1.0"
+description = "Minimal CPython Android extension used to verify the PyRun native wheel pipeline"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "DA Tech Studio" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: Android",
+]
+
+[tool.cibuildwheel]
+build = "cp313-android_*"
+skip = "*-manylinux*"
+test-command = "python -c \"import pyrun_native_probe; assert pyrun_native_probe.add(19, 23) == 42; assert pyrun_native_probe.native_abi()\""
+
+[tool.cibuildwheel.android]
+archs = ["arm64_v8a", "x86_64"]
+build-frontend = "build"
