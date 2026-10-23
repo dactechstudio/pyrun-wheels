@@ -94,6 +94,15 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         self.assertEqual(workflow["jobs"]["build"]["strategy"]["matrix"]["include"][0]["runner"], "ubuntu-24.04")
         self.assertEqual(workflow["jobs"]["build"]["strategy"]["matrix"]["include"][1]["runner"], "macos-15")
         self.assertEqual(workflow["jobs"]["build"]["strategy"]["matrix"]["include"][1]["abi"], "arm64_v8a")
+        matrix = workflow["jobs"]["build"]["strategy"]["matrix"]["include"]
+        self.assertEqual({item["abi"] for item in matrix if item["emulator_test"] == "true"}, {"x86_64"})
+        self.assertEqual({item["abi"] for item in matrix if item["emulator_test"] == "false"}, {"arm64_v8a"})
+        emulator_setup = [
+            step for step in workflow["jobs"]["build"]["steps"]
+            if step["name"] == "Install Android emulator on supported Linux CI runner"
+        ]
+        self.assertEqual(len(emulator_setup), 1)
+        self.assertEqual(emulator_setup[0]["run"].strip(), '"${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install "emulator"')
 
     def test_verifies_abi_machine_hash_and_16kb_load_alignment(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

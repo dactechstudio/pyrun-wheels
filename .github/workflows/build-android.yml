@@ -44,9 +44,11 @@ jobs:
           - runner: ubuntu-24.04
             abi: x86_64
             cibw_arch: x86_64
+            emulator_test: true
           - runner: macos-15
             abi: arm64_v8a
             cibw_arch: arm64_v8a
+            emulator_test: false
     runs-on: ${{ matrix.runner }}
     env:
       ANDROID_API_LEVEL: "25"
@@ -82,13 +84,25 @@ jobs:
           "$sdkmanager" --install "ndk;30.0.16248370"
           echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/30.0.16248370" >> "$GITHUB_ENV"
 
+      - name: Install Android emulator on supported Linux CI runner
+        if: ${{ matrix.emulator_test }}
+        shell: bash
+        run: |
+          "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install "emulator"
+
       - name: Install pinned wheel tooling
         run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
 
-      - name: Skip emulator only for an explicit build-only dispatch
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_emulator_tests == false }}
+      - name: Skip emulator when this runner cannot provide managed Android virtualization
+        if: ${{ !matrix.emulator_test || (github.event_name == 'workflow_dispatch' && inputs.run_emulator_tests == false) }}
         shell: bash
-        run: echo "CIBW_TEST_SKIP=*" >> "$GITHUB_ENV"
+        run: |
+          echo "CIBW_TEST_SKIP=*" >> "$GITHUB_ENV"
+          if [[ "${{ matrix.emulator_test }}" != "true" ]]; then
+            echo "Skipping managed emulator on macOS ARM: cibuildwheel documents GitHub Actions Linux x86_64 as the supported hosted emulator environment."
+          else
+            echo "Skipping managed emulator because this workflow was explicitly dispatched in build-only mode."
+          fi
 
       - name: Build the ABI wheel twice
         shell: bash

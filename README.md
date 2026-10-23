@@ -25,15 +25,22 @@ match exactly. NDK `llvm-readelf` then verifies the ELF machine and every
 ## CI behavior
 
 Every push and pull request runs the repository tests, builds both ABI wheels,
-runs the native import smoke test on a managed Android emulator for each ABI,
-verifies the wheels, and stages a signed-manifest-ready Simple Repository
-snapshot. The workflow does not publish to GitHub Pages or release binaries;
-the resulting unsigned snapshot is an Actions artifact retained for 14 days.
-Manual workflow dispatch also runs emulator tests by default; they can be
-disabled for a build-only diagnostic run.
+verifies repeatability, wheel tags, hashes and ELF alignment, and stages an
+unsigned Simple Repository snapshot. The x86_64 wheel also gets a native import
+smoke test in cibuildwheel's managed Android emulator on the GitHub-hosted
+Linux x86_64 runner. The arm64-v8a wheel is built and statically verified on a
+native macOS ARM runner, but its managed emulator test is skipped: the current
+hosted macOS runner could not start that emulator, and cibuildwheel documents
+GitHub Actions Linux x86_64 as its supported hosted Android-emulator
+environment. The workflow does not publish to GitHub Pages or release
+binaries; its unsigned snapshot is an Actions artifact retained for 14 days.
+Manual workflow dispatch also runs the supported emulator test by default; it
+can be disabled for a build-only diagnostic run.
 
-The Actions tests are cloud emulators. No physical device is required. See
-[`PHASE16.md`](PHASE16.md) for status, signing, yank, and rollback procedures.
+No physical device is required for the x86_64 smoke test. Full arm64-v8a import
+smoke coverage needs a runner that can provide a working Android ARM64
+emulator. See [`PHASE16.md`](PHASE16.md) for status, signing, yank, and rollback
+procedures.
 
 ## Local build
 
@@ -54,8 +61,9 @@ python -m cibuildwheel --platform android --archs x86_64 \
   --output-dir wheelhouse recipes/native_probe
 ```
 
-Build on a native ARM64 macOS runner for the ARM64 wheel and its emulator test.
-Cross-building another ABI on a host does not prove that ABI can import.
+Build on a native ARM64 macOS runner for the ARM64 wheel and its ELF/static
+verification. Cross-building another ABI on a host does not prove that ABI can
+import.
 
 ## Signed repository snapshots
 
