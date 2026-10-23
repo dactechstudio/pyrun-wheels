@@ -46,7 +46,13 @@ def validate_manifest(manifest_path: Path) -> dict:
 
     for artifact in manifest["artifacts"]:
         verify_hash(artifact["url"], artifact["sha256"])
+        recipe_path = resolve_artifact(artifact["recipePath"])
         verify_hash(artifact["recipePath"], artifact["recipeSha256"])
+        recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
+        if recipe.get("release_status") not in (None, "approved"):
+            raise ValueError(
+                f"recipe is not approved for publication: {recipe.get('name', artifact['name'])}"
+            )
         verify_hash(artifact["sbomPath"], artifact["sbomSha256"])
         for patch in artifact["patches"]:
             verify_hash(patch["path"], patch["sha256"])

@@ -4,7 +4,7 @@
   "title": "PyRun Android wheel build recipe",
   "type": "object",
   "additionalProperties": false,
-  "required": ["name", "version", "python_tag", "android_api_min", "abis", "license", "source_url", "build", "patches", "runtime_dependencies", "sbom"],
+    "required": ["name", "version", "python_tag", "android_api_min", "abis", "license", "source_url", "build", "patches", "runtime_dependencies", "sbom"],
   "properties": {
     "name": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$"},
     "version": {"type": "string", "minLength": 1, "maxLength": 64},
@@ -16,8 +16,14 @@
       "uniqueItems": true,
       "items": {"enum": ["arm64_v8a", "x86_64"]}
     },
-    "license": {"type": "string", "pattern": "^[A-Z0-9.+-]+$"},
+    "license": {"type": "string", "pattern": "^[A-Za-z0-9.+-]+$"},
     "source_url": {"type": "string", "format": "uri", "pattern": "^https://"},
+    "source_revision": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "release_status": {"enum": ["experimental", "approved"]},
+    "source_submodules": {
+      "type": "object",
+      "additionalProperties": {"type": "string", "pattern": "^[a-f0-9]{40}$"}
+    },
     "build": {
       "type": "object",
       "additionalProperties": false,
@@ -26,7 +32,10 @@
         "cibuildwheel": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
         "ndk": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
         "setuptools": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
-        "wheel": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"}
+        "wheel": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+        "cmake": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+        "numpy": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+        "scikit_build": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"}
       }
     },
     "patches": {
@@ -36,7 +45,7 @@
         "additionalProperties": false,
         "required": ["path", "sha256"],
         "properties": {
-          "path": {"type": "string", "pattern": "^patches/[A-Za-z0-9._/-]+$"},
+        "path": {"type": "string", "pattern": "^(patches|scripts)/[A-Za-z0-9._/-]+$"},
           "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
         }
       }

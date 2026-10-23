@@ -44,6 +44,11 @@
           "sha256": {"$ref": "#/$defs/sha256"},
           "url": {"type": "string", "format": "uri-reference", "minLength": 1},
           "sourceUrl": {"type": "string", "format": "uri", "pattern": "^https://"},
+          "upstreamRevision": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+          "upstreamSubmodules": {
+            "type": "object",
+            "additionalProperties": {"type": "string", "pattern": "^[a-f0-9]{40}$"}
+          },
           "sourceTreeSha256": {"$ref": "#/$defs/sha256"},
           "recipePath": {"type": "string", "pattern": "^recipes/[^ ]+\\.json$"},
           "recipeSha256": {"$ref": "#/$defs/sha256"},
@@ -54,12 +59,12 @@
               "additionalProperties": false,
               "required": ["path", "sha256"],
               "properties": {
-                "path": {"type": "string", "pattern": "^recipes/[A-Za-z0-9._/-]+$"},
+              "path": {"type": "string", "pattern": "^(recipes|scripts)/[A-Za-z0-9._/-]+$"},
                 "sha256": {"$ref": "#/$defs/sha256"}
               }
             }
           },
-          "license": {"type": "string", "pattern": "^[A-Z0-9.+-]+$"},
+          "license": {"type": "string", "pattern": "^[A-Za-z0-9.+-]+$"},
           "sbomPath": {"type": "string", "pattern": "^sbom/[^ ]+\\.json$"},
           "sbomSha256": {"$ref": "#/$defs/sha256"},
           "playRuntimeInstallAllowed": {"const": false},

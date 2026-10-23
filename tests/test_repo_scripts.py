@@ -32,19 +32,27 @@ from scripts.stage_simple_index import stage
 from scripts.verify_android_wheels import safe_members, verify_wheel
 
 
-def make_wheel(path: Path, abi: str) -> None:
-    filename = f"pyrun_native_probe-0.1.0-cp313-cp313-android_25_{abi}.whl"
+def make_wheel(
+    path: Path,
+    abi: str,
+    *,
+    distribution: str = "pyrun-native-probe",
+    version: str = "0.1.0",
+    module_path: str = "pyrun_native_probe/_native.so",
+) -> None:
+    wheel_name = distribution.replace("-", "_")
+    dist_info = f"{wheel_name}-{version}.dist-info"
+    filename = f"{wheel_name}-{version}-cp313-cp313-android_25_{abi}.whl"
     path = path / filename
-    dist_info = "pyrun_native_probe-0.1.0.dist-info"
     contents = {
         f"{dist_info}/METADATA": (
-            "Metadata-Version: 2.4\nName: pyrun-native-probe\nVersion: 0.1.0\n"
+            f"Metadata-Version: 2.4\nName: {distribution}\nVersion: {version}\n"
             "Requires-Python: >=3.13,<3.14\n\n"
         ).encode(),
         f"{dist_info}/WHEEL": (
             f"Wheel-Version: 1.0\nRoot-Is-Purelib: false\nTag: cp313-cp313-android_25_{abi}\n"
         ).encode(),
-        "pyrun_native_probe/_native.so": b"ELF fixture bytes",
+        module_path: b"ELF fixture bytes",
     }
     record = io.StringIO(newline="")
     rows = csv.writer(record, lineterminator="\n")
@@ -98,8 +106,15 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         self.assertEqual(workflow["jobs"]["build"]["strategy"]["matrix"]["include"][1]["runner"], "macos-15")
         self.assertEqual(workflow["jobs"]["build"]["strategy"]["matrix"]["include"][1]["abi"], "arm64_v8a")
         matrix = workflow["jobs"]["build"]["strategy"]["matrix"]["include"]
-        self.assertEqual({item["abi"] for item in matrix if item["emulator_test"] == "true"}, {"x86_64"})
-        self.assertEqual({item["abi"] for item in matrix if item["emulator_test"] == "false"}, {"arm64_v8a"})
+        self.assertEqual({item["emulator_test"] for item in matrix}, {"false"})
+        self.assertEqual(
+            workflow["on"]["workflow_dispatch"]["inputs"]["run_emulator_tests"]["default"],
+            "false",
+        )
+        self.assertEqual(
+            workflow["on"]["workflow_dispatch"]["inputs"]["build_opencv"]["default"],
+            "true",
+        )
         emulator_setup = [
             step for step in workflow["jobs"]["build"]["steps"]
             if step["name"] == "Install Android emulator on supported Linux CI runner"
@@ -133,6 +148,70 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             'find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -name llvm-readelf',
             stage_verify["run"],
         )
+        opencv_steps = [
+            step for step in workflow["jobs"]["build"]["steps"]
+            if step["name"] in {
+                "Prepare pinned upstream OpenCV-Python source",
+                "Build optional OpenCV-Python Android wheel",
+                "Verify OpenCV wheel tags, ABI, hashes, and 16 KB ELF alignment",
+            }
+        ]
+        self.assertEqual(len(opencv_steps), 3)
+        self.assertTrue(all("inputs.build_opencv == true" in step["if"] for step in opencv_steps))
+        self.assertIn("CIBW_TEST_SKIP='*'", opencv_steps[1]["run"])
+
+    def test_opencv_recipe_pins_upstream_inputs_and_patch_digest(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        recipe = json.loads(
+            (root / "recipes" / "opencv_python" / "recipe.json").read_text(encoding="utf-8")
+        )
+        schema = json.loads(
+            (root / "schemas" / "build-recipe.schema.json").read_text(encoding="utf-8")
+        )
+        validate(instance=recipe, schema=schema)
+        self.assertEqual(recipe["source_revision"], "255564a37c4a23275485e827abbe19031347d458")
+        self.assertEqual(recipe["source_submodules"]["opencv"], "31b0eeea0b44b370fd0712312df4214d4ae1b158")
+        self.assertEqual(set(recipe["abis"]), {"arm64_v8a", "x86_64"})
+        self.assertEqual(recipe["build"]["numpy"], "1.26.2")
+        self.assertEqual(recipe["release_status"], "experimental")
+        patch = recipe["patches"][0]
+        self.assertEqual(
+            hashlib.sha256((root / patch["path"]).read_bytes()).hexdigest(),
+            patch["sha256"],
+        )
+
+    def test_snapshot_stages_probe_and_opencv_as_two_signed_index_packages(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wheel_dir = root / "wheels"
+            wheel_dir.mkdir()
+            for abi in ("x86_64", "arm64_v8a"):
+                make_wheel(wheel_dir, abi)
+                make_wheel(
+                    wheel_dir,
+                    abi,
+                    distribution="opencv-python-headless",
+                    version="4.11.0.86",
+                    module_path="cv2/cv2.abi3.so",
+                )
+
+            output = root / "snapshot"
+            manifest = stage(wheel_dir, output, "b" * 40)
+            opencv_artifacts = [
+                item for item in manifest["artifacts"]
+                if item["name"] == "opencv-python-headless"
+            ]
+            self.assertEqual({item["abi"] for item in opencv_artifacts}, {"arm64_v8a", "x86_64"})
+            self.assertEqual(
+                {item["upstreamRevision"] for item in opencv_artifacts},
+                {"255564a37c4a23275485e827abbe19031347d458"},
+            )
+            index = output / "simple" / "opencv-python-headless" / "index.html"
+            self.assertTrue(index.is_file())
+            self.assertEqual(index.read_text(encoding="utf-8").count("<a href="), 2)
+            self.assertTrue((output / "scripts" / "prepare_opencv_source.py").is_file())
+            with self.assertRaisesRegex(ValueError, "recipe is not approved for publication: opencv-python-headless"):
+                validate_manifest(output / "manifest.json")
 
     def test_signing_workflow_is_separate_manual_protected_and_read_only(self) -> None:
         workflow_path = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "sign-snapshot.yml"

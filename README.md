@@ -24,19 +24,25 @@ match exactly. NDK `llvm-readelf` then verifies the ELF machine and every
 
 ## CI behavior
 
-Every push and pull request runs the repository tests, builds both ABI wheels,
-verifies repeatability, wheel tags, hashes and ELF alignment, and stages an
-unsigned Simple Repository snapshot. The x86_64 wheel also gets a native import
-smoke test in cibuildwheel's managed Android emulator on the GitHub-hosted
-Linux x86_64 runner using the latest managed Android version available to the
-test runner. The arm64-v8a wheel is built and statically verified on a
-native macOS ARM runner, but its managed emulator test is skipped: the current
-hosted macOS runner could not start that emulator, and cibuildwheel documents
-GitHub Actions Linux x86_64 as its supported hosted Android-emulator
-environment. The workflow does not publish to GitHub Pages or release
+Every push and pull request runs the repository tests, builds the probe wheels
+for both ABIs, verifies repeatability, wheel tags, hashes and ELF alignment,
+and stages an unsigned Simple Repository snapshot. Emulator tests are disabled
+by default, including on manual runs, to honor the project's build-only CI
+policy. A maintainer may explicitly enable the x86_64 managed-emulator smoke
+test for a workflow dispatch; arm64-v8a is statically verified only. OpenCV is
+an opt-in source build in manual runs and is also statically verified without
+emulator execution. The workflow does not publish to GitHub Pages or release
 binaries; its unsigned snapshot is an Actions artifact retained for 14 days.
-Manual workflow dispatch also runs the supported emulator test by default; it
-can be disabled for a build-only diagnostic run.
+
+The optional `opencv-python-headless` recipe pins upstream OpenCV-Python and
+OpenCV source revisions, and targets CPython 3.13 / Android API 25 for both
+ABIs. It is not part of routine push/PR builds. Dispatch `Build and verify
+Android wheels` from `main` with `build_opencv=true`; the run builds the source,
+checks both wheel tags/ELF architectures, and includes both ABI artifacts in
+the review snapshot. This is not yet runtime import verification. The recipe is
+marked experimental, and the signing tool blocks it from a signed snapshot
+until a reviewed change approves it after build-output, license, and package
+content checks.
 
 The separate `Sign and promote wheel snapshot` workflow is manually dispatched
 from `main`. It accepts only a successful `build-android.yml` run on `main`,
@@ -62,16 +68,18 @@ configured for the legacy `main` branch source; the publisher does not change
 repository settings automatically. The `gh-pages` branch is only durable
 release history, not the Pages build source.
 
-No physical device is required for the x86_64 smoke test. Full arm64-v8a import
-smoke coverage needs a runner that can provide a working Android ARM64
-emulator. See [`PHASE16.md`](PHASE16.md) for status, signing, yank, and rollback
-procedures.
+No physical device is required for the optional x86_64 smoke test. Full
+arm64-v8a import smoke coverage needs a runner that can provide a working
+Android ARM64 emulator. See [`PHASE16.md`](PHASE16.md) for status, signing,
+yank, and rollback procedures.
 
 ## Local build
 
 Use Linux x86_64 or macOS ARM64/x86_64 with Android command-line tools, Java 17,
 and the pinned NDK. Windows is not a supported cibuildwheel Android host.
-GitHub Actions is the canonical two-ABI build and emulator-test environment.
+GitHub Actions is the canonical two-ABI build environment. It does not run
+emulator or physical-device tests unless the supported x86_64 emulator option
+is explicitly enabled.
 
 ```sh
 python3.13 -m venv .venv
@@ -167,4 +175,6 @@ python scripts/yank_version.py unyank pyrun-native-probe 0.1.0
   requires a protected environment, a valid signature, and a reviewed release
   action; it never receives the private signing key.
 - Arbitrary pip packages, sdists, runtime native-wheel downloads, compilers,
-  TensorFlow, PyTorch, OpenCV and SciPy are outside this proof package's scope.
+  TensorFlow, PyTorch and SciPy are outside this proof package's scope. OpenCV
+  has a separate experimental, build-only recipe and is not yet a published or
+  runtime-verified package.

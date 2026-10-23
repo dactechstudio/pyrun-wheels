@@ -1,0 +1,31 @@
+{
+  "name": "opencv-python-headless",
+  "version": "4.11.0.86",
+  "python_tag": "cp313-cp313",
+  "android_api_min": 25,
+  "abis": ["arm64_v8a", "x86_64"],
+  "license": "Apache-2.0",
+  "release_status": "experimental",
+  "source_url": "https://github.com/opencv/opencv-python",
+  "source_revision": "255564a37c4a23275485e827abbe19031347d458",
+  "source_submodules": {
+    "opencv": "31b0eeea0b44b370fd0712312df4214d4ae1b158"
+  },
+  "build": {
+    "cibuildwheel": "4.3.1",
+    "ndk": "30.0.16248370",
+    "setuptools": "80.9.0",
+    "wheel": "0.45.1",
+    "cmake": "3.31.6",
+    "numpy": "1.26.2",
+    "scikit_build": "0.18.1"
+  },
+  "patches": [
+    {
+      "path": "scripts/prepare_opencv_source.py",
+      "sha256": "a94107d46dfd55b050bd0e5240e98f9c771e707f78698ae2752fb8becfe70d7f"
+    }
+  ],
+  "runtime_dependencies": ["numpy>=1.26.0,<2"],
+  "sbom": "sbom/opencv-python-headless.cdx.json"
+}

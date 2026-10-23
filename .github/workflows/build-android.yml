@@ -10,6 +10,11 @@ on:
         description: Run cibuildwheel import smoke tests in managed Android emulators
         required: true
         type: boolean
+        default: false
+      build_opencv:
+        description: Build optional OpenCV-Python Android wheels from pinned upstream source
+        required: true
+        type: boolean
         default: true
 
 permissions:
@@ -44,7 +49,7 @@ jobs:
           - runner: ubuntu-24.04
             abi: x86_64
             cibw_arch: x86_64
-            emulator_test: true
+            emulator_test: false
           - runner: macos-15
             abi: arm64_v8a
             cibw_arch: arm64_v8a
@@ -85,7 +90,7 @@ jobs:
           echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/30.0.16248370" >> "$GITHUB_ENV"
 
       - name: Install Android emulator on supported Linux CI runner
-        if: ${{ matrix.emulator_test }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_emulator_tests == true && matrix.abi == 'x86_64' }}
         shell: bash
         run: |
           "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install "emulator"
@@ -109,15 +114,11 @@ jobs:
         run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
 
       - name: Skip emulator when this runner cannot provide managed Android virtualization
-        if: ${{ !matrix.emulator_test || (github.event_name == 'workflow_dispatch' && inputs.run_emulator_tests == false) }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_emulator_tests != true || matrix.abi != 'x86_64' }}
         shell: bash
         run: |
           echo "CIBW_TEST_SKIP=*" >> "$GITHUB_ENV"
-          if [[ "${{ matrix.emulator_test }}" != "true" ]]; then
-            echo "Skipping managed emulator on macOS ARM: cibuildwheel documents GitHub Actions Linux x86_64 as the supported hosted emulator environment."
-          else
-            echo "Skipping managed emulator because this workflow was explicitly dispatched in build-only mode."
-          fi
+          echo "Skipping Android emulator tests: not explicitly enabled for this supported Linux x86_64 job."
 
       - name: Build the ABI wheel twice
         shell: bash
@@ -138,11 +139,43 @@ jobs:
           python scripts/verify_android_wheels.py wheelhouse-first/*.whl \
             --expected-abi "${{ matrix.abi }}" --android-api 25 --readelf "$PYRUN_NDK_LLVM_READELF"
 
+      - name: Prepare pinned upstream OpenCV-Python source
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_opencv == true }}
+        shell: bash
+        run: |
+          python scripts/prepare_opencv_source.py --source-dir "$RUNNER_TEMP/opencv-python-source"
+
+      - name: Build optional OpenCV-Python Android wheel
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_opencv == true }}
+        shell: bash
+        run: |
+          export CIBW_TEST_SKIP='*'
+          export CIBW_ENVIRONMENT_ANDROID='PIP_EXTRA_INDEX_URL=https://chaquo.com/pypi-13.1/ ENABLE_HEADLESS=1'
+          python -m cibuildwheel --platform android \
+            --archs "${{ matrix.cibw_arch }}" \
+            --output-dir opencv-wheelhouse "$RUNNER_TEMP/opencv-python-source"
+
+      - name: Verify OpenCV wheel tags, ABI, hashes, and 16 KB ELF alignment
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_opencv == true }}
+        shell: bash
+        run: |
+          python scripts/verify_android_wheels.py opencv-wheelhouse/*.whl \
+            --expected-abi "${{ matrix.abi }}" --android-api 25 --readelf "$PYRUN_NDK_LLVM_READELF"
+
       - name: Upload verified wheel
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: wheels-${{ matrix.abi }}
           path: wheelhouse-first/*.whl
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload optional OpenCV wheel for reviewed snapshot staging
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_opencv == true }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: wheels-opencv-${{ matrix.abi }}
+          path: opencv-wheelhouse/*.whl
           if-no-files-found: error
           retention-days: 14
 

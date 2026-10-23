@@ -1,0 +1,54 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:07f14a41-9f8c-497d-a3da-83d40b58ef4a",
+  "version": 1,
+  "metadata": {
+    "properties": [
+      {
+        "name": "pyrun:release-status",
+        "value": "experimental; pending Android wheel and license review"
+      }
+    ],
+    "component": {
+      "type": "library",
+      "name": "opencv-python-headless",
+      "version": "4.11.0.86",
+      "licenses": [{ "license": { "id": "Apache-2.0" } }],
+      "purl": "pkg:pypi/opencv-python-headless@4.11.0.86"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "opencv-python",
+      "version": "4.11.0.86",
+      "licenses": [{ "license": { "id": "MIT" } }],
+      "purl": "pkg:pypi/opencv-python@4.11.0.86"
+    },
+    {
+      "type": "library",
+      "name": "OpenCV",
+      "version": "4.11.0",
+      "licenses": [{ "license": { "id": "Apache-2.0" } }],
+      "purl": "pkg:github/opencv/opencv@4.11.0"
+    },
+    {
+      "type": "library",
+      "name": "NumPy",
+      "version": "1.26.2",
+      "licenses": [{ "license": { "id": "BSD-3-Clause" } }],
+      "purl": "pkg:pypi/numpy@1.26.2"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:pypi/opencv-python-headless@4.11.0.86",
+      "dependsOn": [
+        "pkg:pypi/opencv-python@4.11.0.86",
+        "pkg:github/opencv/opencv@4.11.0",
+        "pkg:pypi/numpy@1.26.2"
+      ]
+    }
+  ]
+}
