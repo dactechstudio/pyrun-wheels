@@ -105,6 +105,12 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         ]
         self.assertEqual(len(emulator_setup), 1)
         self.assertEqual(emulator_setup[0]["run"].strip(), '"${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install "emulator"')
+        emulator_gpu = [
+            step for step in workflow["jobs"]["build"]["steps"]
+            if step["name"] == "Configure software GPU for managed Android emulators"
+        ]
+        self.assertEqual(len(emulator_gpu), 1)
+        self.assertIn("android.testoptions.manageddevices.emulator.gpu=swiftshader_indirect", emulator_gpu[0]["run"])
         preserved_tools = [
             step for step in workflow["jobs"]["build"]["steps"]
             if step["name"] == "Preserve NDK ELF tools before cibuildwheel cleanup"

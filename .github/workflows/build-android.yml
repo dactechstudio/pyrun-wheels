@@ -90,6 +90,12 @@ jobs:
         run: |
           "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --install "emulator"
 
+      - name: Configure software GPU for managed Android emulators
+        if: ${{ matrix.emulator_test }}
+        shell: bash
+        run: |
+          echo "GRADLE_OPTS=-Dorg.gradle.project.android.testoptions.manageddevices.emulator.gpu=swiftshader_indirect" >> "$GITHUB_ENV"
+
       - name: Preserve NDK ELF tools before cibuildwheel cleanup
         shell: bash
         run: |
