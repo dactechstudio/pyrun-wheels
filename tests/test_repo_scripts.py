@@ -133,6 +133,7 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         restage_steps = {step["name"]: step for step in restage["steps"]}
         self.assertIn("gh run download", restage_steps["Download exact wheel artifacts from the source build"]["run"])
         self.assertIn("verify_android_wheels.py", restage_steps["Re-verify wheel artifacts and stage reviewed snapshot"]["run"])
+        self.assertIn('for wheel in wheelhouse/*android_25_"$abi".whl', restage_steps["Re-verify wheel artifacts and stage reviewed snapshot"]["run"])
         self.assertIn("stage_simple_index.py", restage_steps["Re-verify wheel artifacts and stage reviewed snapshot"]["run"])
         self.assertEqual(
             restage_steps["Upload unsigned snapshot for signing"]["with"]["name"],

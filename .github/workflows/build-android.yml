@@ -336,8 +336,10 @@ jobs:
           readelf="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -name llvm-readelf -print -quit)"
           test -n "$readelf" && test -x "$readelf"
           for abi in arm64_v8a x86_64; do
-            python scripts/verify_android_wheels.py wheelhouse/*android_25_"$abi".whl \
-              --expected-abi "$abi" --android-api 25 --readelf "$readelf"
+            for wheel in wheelhouse/*android_25_"$abi".whl; do
+              python scripts/verify_android_wheels.py "$wheel" \
+                --expected-abi "$abi" --android-api 25 --readelf "$readelf"
+            done
           done
           python scripts/stage_simple_index.py \
             --wheel-dir wheelhouse \
