@@ -1,28 +1,45 @@
 # PyRun Android wheels
 
-This is the separate source repository for reproducible Android wheels used by
-PyRun. It is deliberately separate from the Android app and from PyPI. The
-first recipe is a tiny compiled extension used to prove the build, ABI, index,
-integrity, and 16 KB ELF checks before adding scientific packages.
+This is PyRun's separate source repository for reviewed native Android wheels.
+It is not the Android app and is not a public PyPI index. The initial package,
+`pyrun-native-probe`, is a tiny compiled extension used to exercise the complete
+build, ABI, import, integrity, 16 KB ELF, index, signing, yank, and rollback
+pipeline before adding larger native libraries.
 
-## Support matrix
+## Supported proof matrix
 
-| Python | Android ABI | Minimum API | Build target |
+| CPython | Android ABI | Minimum API | Wheel platform tag |
 | --- | --- | ---: | --- |
-| CPython 3.13 | `arm64-v8a` | 25 | `android_25_arm64_v8a` |
-| CPython 3.13 | `x86_64` | 25 | `android_25_x86_64` |
+| 3.13 | `arm64-v8a` | 25 | `android_25_arm64_v8a` |
+| 3.13 | `x86_64` | 25 | `android_25_x86_64` |
 
-The GitHub Actions workflow builds each ABI on a matching hosted runner and
-lets cibuildwheel run its Android testbed on that runner's architecture. The
-Android SDK/NDK versions, cibuildwheel, Python build backend, recipe, and package
-inputs are pinned. NDK r30 is used; it emits 16 KB-aligned ELF load segments by
-default. Every native `.so` is checked again before it can enter the index.
+The build pins CPython 3.13.17, NDK 30.0.16248370, cibuildwheel 4.3.1,
+`build` 1.3.0, setuptools 80.9.0, wheel 0.45.1 and the repository tooling in
+`toolchain.lock`, `requirements-dev.txt` and each package recipe. The CI runner
+is pinned to Ubuntu 24.04 x64 for the x86_64 wheel and macOS 15 ARM64 for the
+arm64-v8a wheel. A commit timestamp is passed as
+`SOURCE_DATE_EPOCH`; each ABI is built twice and the output wheel bytes must
+match exactly. NDK `llvm-readelf` then verifies the ELF machine and every
+`PT_LOAD` segment's 16 KB alignment.
 
-## Build locally
+## CI behavior
 
-Android wheel builds require Linux x86_64 or macOS ARM64/x86_64, Android command
-line tools, Java, and the NDK version in `toolchain.lock`. Windows is not a
-supported cibuildwheel host for Android. On a supported host:
+Every push and pull request runs the repository tests, builds both ABI wheels,
+runs the native import smoke test on a managed Android emulator for each ABI,
+verifies the wheels, and stages a signed-manifest-ready Simple Repository
+snapshot. The workflow does not publish to GitHub Pages or release binaries;
+the resulting unsigned snapshot is an Actions artifact retained for 14 days.
+Manual workflow dispatch also runs emulator tests by default; they can be
+disabled for a build-only diagnostic run.
+
+The Actions tests are cloud emulators. No physical device is required. See
+[`PHASE16.md`](PHASE16.md) for status, signing, yank, and rollback procedures.
+
+## Local build
+
+Use Linux x86_64 or macOS ARM64/x86_64 with Android command-line tools, Java 17,
+and the pinned NDK. Windows is not a supported cibuildwheel Android host.
+GitHub Actions is the canonical two-ABI build and emulator-test environment.
 
 ```sh
 python3.13 -m venv .venv
@@ -31,47 +48,68 @@ python -m pip install -r requirements-dev.txt
 yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
 "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;30.0.16248370"
 export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/30.0.16248370"
-ANDROID_API_LEVEL=25 python -m cibuildwheel --platform android \
-  --archs arm64_v8a,x86_64 --output-dir wheelhouse recipes/native_probe
+export ANDROID_API_LEVEL=25
+export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
+python -m cibuildwheel --platform android --archs x86_64 \
+  --output-dir wheelhouse recipes/native_probe
 ```
 
-Then validate each wheel and build a local Simple Repository snapshot:
+Build on a native ARM64 macOS runner for the ARM64 wheel and its emulator test.
+Cross-building another ABI on a host does not prove that ABI can import.
+
+## Signed repository snapshots
+
+`scripts/stage_simple_index.py` creates a new snapshot directory and refuses to
+replace an existing one. Its manifest records wheel, recipe, patch, SBOM and
+Simple-index SHA-256 digests. The signed manifest therefore authenticates the
+generated PEP 503 index as well as every wheel. `playRuntimeInstallAllowed` is
+always false: the Play app must not download or execute native wheels at
+runtime.
+
+Generate a production Ed25519 keypair in a controlled environment; keep the
+private key outside Git and store it only in a protected release environment.
+The app must independently pin the public key before it trusts any repository
+snapshot. Do not publish or consume unsigned snapshots as trusted releases.
 
 ```sh
-python scripts/verify_android_wheels.py wheelhouse/*.whl \
-  --android-api 25 --readelf "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
-python scripts/stage_simple_index.py --wheel-dir wheelhouse --output-dir dist/repository \
-  --source-revision "$(git rev-parse HEAD)"
+python scripts/sign_manifest.py sign dist/repository/manifest.json \
+  --private-key /secure/path/pyrun-ed25519-private.pem
+python scripts/sign_manifest.py verify dist/repository/manifest.json \
+  --public-key keys/pyrun-ed25519-public.pem \
+  --signature dist/repository/manifest.json.sig
+python scripts/promote_snapshot.py dist/repository dist/releases/2026-10-23 \
+  --public-key keys/pyrun-ed25519-public.pem
 ```
 
-On macOS, find `llvm-readelf` under the NDK's `toolchains/llvm/prebuilt/*/bin`
-directory and use that path. Cibuildwheel executes the native import smoke test
-on a Gradle-managed Android emulator for the runner's architecture; it does not
-test a different ABI by pretending to run it on the host.
+Promotion verifies the signature and every recorded file digest, copies the
+snapshot into a new destination, and never overwrites a previous release. To
+roll back, promote a previously signed snapshot into another new deployment
+directory; do not mutate the historical snapshot or replace it in place.
 
-## Repository and release security
+## Yank a release
 
-- A wheel is executable code. Only reviewed recipes with pinned sources, an
-  SPDX license, a source-tree digest, a build recipe, and an SBOM may be staged.
-- The workflow on pull requests and branches only builds, tests, verifies, and
-  uploads a temporary Actions artifact. It does not publish Pages, create a
-  release, or access signing credentials.
-- A production snapshot must have `manifest.json` signed with Ed25519. Use
-  `scripts/sign_manifest.py` with a private key stored in a protected GitHub
-  Actions environment; never commit the private key. The public key must be
-  pinned in the consuming app before that app trusts this repository.
-- The Play-distributed PyRun app must not download or execute native wheels at
-  runtime. Native libraries need to be included at build time or delivered
-  through an approved Play mechanism. A separate distribution profile requires
-  a separate policy and release review.
-- Repository index and manifest checksums detect accidental corruption; only a
-  signature verified against a public key already trusted by the app protects
-  against a substituted manifest.
-- Never add unreviewed artifacts, secrets, credentials, or user workspace data.
+Yanking is an explicit, reviewed change to `repository/yanks.json`. It retains
+the wheel and marks its PEP 503 link with `data-yanked`, including the reason.
+The resulting index and yank state are covered by the signed manifest. Rebuild
+and sign a new snapshot after changing the policy.
 
-## Current state
+```sh
+python scripts/yank_version.py yank pyrun-native-probe 0.1.0 \
+  --reason "Withdrawn while investigating a compatibility issue"
+python scripts/stage_simple_index.py --wheel-dir wheelhouse \
+  --output-dir dist/yanked-snapshot --source-revision "<40-character-commit>"
+python scripts/yank_version.py unyank pyrun-native-probe 0.1.0
+```
 
-The local repository skeleton and CI are not yet published to GitHub. The proof
-wheel has not yet been built in a Linux/macOS Android toolchain in this local
-Windows session. Do not describe the ABI artifacts as available until CI
-produces and verifies them.
+## Scope and release safety
+
+- Only reviewed recipes with pinned build inputs, SPDX license, source-tree
+  digest, patch hashes and CycloneDX SBOM may enter a snapshot.
+- Pull-request workflows have read-only repository permissions and no signing
+  credentials.
+- CI snapshots are temporary review artifacts, not a published package index.
+- A future Pages/release publisher must require a protected environment, a
+  valid signature, and a reviewed release action. It must remain separate from
+  the build workflow.
+- Arbitrary pip packages, sdists, runtime native-wheel downloads, compilers,
+  TensorFlow, PyTorch, OpenCV and SciPy are outside this proof package's scope.

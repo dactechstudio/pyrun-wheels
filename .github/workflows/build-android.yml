@@ -5,73 +5,120 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      run_emulator_tests:
+        description: Run cibuildwheel import smoke tests in managed Android emulators
+        required: true
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
 jobs:
+  test:
+    name: Repository tooling tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Set up CPython
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.13.17"
+
+      - name: Install pinned tooling
+        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
+
+      - name: Run repository validation tests
+        run: python -m unittest discover -s tests -v
+
   build:
     name: CPython 3.13 · ${{ matrix.abi }}
+    needs: test
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-24.04
+          - runner: ubuntu-24.04
             abi: x86_64
             cibw_arch: x86_64
-          - os: macos-15
+          - runner: macos-15
             abi: arm64_v8a
             cibw_arch: arm64_v8a
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner }}
     env:
       ANDROID_API_LEVEL: "25"
       CIBW_BUILD: cp313-android_*
-      CIBW_BUILD_FRONTEND: build
 
     steps:
       - name: Check out source
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - name: Set up Python
+      - name: Set up CPython
         uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with:
-          python-version: "3.13"
+          python-version: "3.13.17"
+
+      - name: Set up pinned Java runtime
+        uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set reproducible build timestamp
+        shell: bash
+        run: echo "SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$GITHUB_SHA")" >> "$GITHUB_ENV"
 
       - name: Install pinned Android NDK
         shell: bash
         run: |
           sdkmanager="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$sdkmanager"
           yes | "$sdkmanager" --licenses >/dev/null
           "$sdkmanager" --install "ndk;30.0.16248370"
           echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/30.0.16248370" >> "$GITHUB_ENV"
 
       - name: Install pinned wheel tooling
-        run: python -m pip install --disable-pip-version-check cibuildwheel==4.3.1 packaging==25.0
+        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
 
-      - name: Build and run Android import smoke test
-        run: >-
-          python -m cibuildwheel --platform android
-          --archs "${{ matrix.cibw_arch }}"
-          --output-dir wheelhouse recipes/native_probe
+      - name: Skip emulator only for an explicit build-only dispatch
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_emulator_tests == false }}
+        shell: bash
+        run: echo "CIBW_TEST_SKIP=*" >> "$GITHUB_ENV"
+
+      - name: Build the ABI wheel twice
+        shell: bash
+        run: |
+          python -m cibuildwheel --platform android \
+            --archs "${{ matrix.cibw_arch }}" \
+            --output-dir wheelhouse-first recipes/native_probe
+          python -m cibuildwheel --platform android \
+            --archs "${{ matrix.cibw_arch }}" \
+            --output-dir wheelhouse-repeat recipes/native_probe
+
+      - name: Verify repeat-build reproducibility
+        run: python scripts/compare_wheels.py wheelhouse-first wheelhouse-repeat
 
       - name: Verify wheel tags, ABI, hashes, and 16 KB ELF alignment
         shell: bash
         run: |
           readelf="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -type f -name llvm-readelf -print -quit)"
           test -n "$readelf"
-          python scripts/verify_android_wheels.py wheelhouse/*.whl \
+          python scripts/verify_android_wheels.py wheelhouse-first/*.whl \
             --expected-abi "${{ matrix.abi }}" --android-api 25 --readelf "$readelf"
 
       - name: Upload verified wheel
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: wheels-${{ matrix.abi }}
-          path: wheelhouse/*.whl
+          path: wheelhouse-first/*.whl
           if-no-files-found: error
           retention-days: 14
 
   stage-index:
-    name: Build Simple Repository snapshot
+    name: Stage unsigned, unpublished Simple Repository
     needs: build
     runs-on: ubuntu-24.04
     permissions:
@@ -80,10 +127,16 @@ jobs:
       - name: Check out source
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - name: Set up Python
+      - name: Set up CPython
         uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with:
-          python-version: "3.13"
+          python-version: "3.13.17"
+
+      - name: Set up pinned Java runtime
+        uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
 
       - name: Download wheels from both ABI jobs
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
@@ -96,14 +149,15 @@ jobs:
         shell: bash
         run: |
           sdkmanager="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$sdkmanager"
           yes | "$sdkmanager" --licenses >/dev/null
           "$sdkmanager" --install "ndk;30.0.16248370"
           echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/30.0.16248370" >> "$GITHUB_ENV"
 
-      - name: Install pinned index tooling
-        run: python -m pip install --disable-pip-version-check packaging==25.0 jsonschema==4.25.1
+      - name: Install pinned repository tooling
+        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
 
-      - name: Re-verify both ABI artifacts and stage index
+      - name: Re-verify both ABI artifacts and stage snapshot
         shell: bash
         run: |
           readelf="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -type f -name llvm-readelf -print -quit)"
@@ -115,7 +169,7 @@ jobs:
             --output-dir dist/repository \
             --source-revision "$GITHUB_SHA"
 
-      - name: Upload unpublished, unsigned repository snapshot
+      - name: Upload unsigned snapshot for review
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: simple-repository-snapshot

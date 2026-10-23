@@ -3,7 +3,12 @@ __pycache__/
 build/
 dist/
 wheelhouse/
+wheelhouse-first/
+wheelhouse-repeat/
 repository/packages/*.whl
 repository/manifest.json
-repository/manifest.sig
+repository/manifest.json.sig
+*.private.pem
+*-private.pem
+*.key
 *.py[cod]

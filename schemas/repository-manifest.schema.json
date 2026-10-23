@@ -4,20 +4,36 @@
   "title": "PyRun Android wheel repository manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "sourceRevision", "pythonVersion", "androidMinApi", "ndkVersion", "artifacts"],
+  "required": ["schemaVersion", "sourceRevision", "pythonVersion", "androidMinApi", "ndkVersion", "toolchainPath", "toolchainSha256", "simpleIndexes", "artifacts"],
   "properties": {
     "schemaVersion": {"const": 1},
     "sourceRevision": {"type": "string", "minLength": 7, "maxLength": 64, "pattern": "^[a-fA-F0-9]+$"},
     "pythonVersion": {"const": "3.13"},
     "androidMinApi": {"type": "integer", "minimum": 25},
     "ndkVersion": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+    "toolchainPath": {"const": "toolchain.lock"},
+    "toolchainSha256": {"$ref": "#/$defs/sha256"},
+    "simpleIndexes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "path", "sha256"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z0-9_][a-z0-9_-]*$"},
+          "path": {"type": "string", "pattern": "^(index\\.html|simple/[^ ]+/index\\.html)$"},
+          "sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
     "artifacts": {
       "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["name", "version", "pythonTag", "abi", "androidApi", "filename", "sha256", "url", "sourceUrl", "sourceTreeSha256", "recipePath", "recipeSha256", "license", "sbomPath", "sbomSha256", "playRuntimeInstallAllowed"],
+        "required": ["name", "version", "pythonTag", "abi", "androidApi", "filename", "sha256", "url", "sourceUrl", "sourceTreeSha256", "recipePath", "recipeSha256", "patches", "license", "sbomPath", "sbomSha256", "playRuntimeInstallAllowed", "yanked"],
         "properties": {
           "name": {"type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,199}$"},
           "version": {"type": "string", "minLength": 1, "maxLength": 64},
@@ -31,10 +47,24 @@
           "sourceTreeSha256": {"$ref": "#/$defs/sha256"},
           "recipePath": {"type": "string", "pattern": "^recipes/[^ ]+\\.json$"},
           "recipeSha256": {"$ref": "#/$defs/sha256"},
+          "patches": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["path", "sha256"],
+              "properties": {
+                "path": {"type": "string", "pattern": "^recipes/[A-Za-z0-9._/-]+$"},
+                "sha256": {"$ref": "#/$defs/sha256"}
+              }
+            }
+          },
           "license": {"type": "string", "pattern": "^[A-Z0-9.+-]+$"},
           "sbomPath": {"type": "string", "pattern": "^sbom/[^ ]+\\.json$"},
           "sbomSha256": {"$ref": "#/$defs/sha256"},
-          "playRuntimeInstallAllowed": {"const": false}
+          "playRuntimeInstallAllowed": {"const": false},
+          "yanked": {"type": "boolean"},
+          "yankReason": {"type": "string", "maxLength": 255}
         }
       }
     }

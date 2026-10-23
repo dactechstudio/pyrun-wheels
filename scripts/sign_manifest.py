@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Sign or verify an exact repository manifest using OpenSSL Ed25519."""
+"""Sign or verify an exact repository manifest using Ed25519."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
-import subprocess
 import tempfile
 from pathlib import Path, PurePosixPath
 
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from jsonschema import validate
 
 
@@ -25,7 +27,7 @@ def validate_manifest(manifest_path: Path) -> dict:
 
     def resolve_artifact(relative_path: str) -> Path:
         relative = PurePosixPath(relative_path)
-        if relative.is_absolute() or any(part in ("", ".", "..") for part in relative.parts):
+        if "\\" in relative_path or relative.is_absolute() or any(part in ("", ".", "..") for part in relative.parts):
             raise ValueError(f"unsafe manifest artifact path: {relative_path}")
         resolved = manifest_root.joinpath(*relative.parts).resolve(strict=True)
         if not resolved.is_relative_to(manifest_root) or not resolved.is_file():
@@ -45,11 +47,22 @@ def validate_manifest(manifest_path: Path) -> dict:
         verify_hash(artifact["url"], artifact["sha256"])
         verify_hash(artifact["recipePath"], artifact["recipeSha256"])
         verify_hash(artifact["sbomPath"], artifact["sbomSha256"])
+        for patch in artifact["patches"]:
+            verify_hash(patch["path"], patch["sha256"])
+    for index in manifest["simpleIndexes"]:
+        verify_hash(index["path"], index["sha256"])
+    verify_hash(manifest["toolchainPath"], manifest["toolchainSha256"])
     return manifest
 
 
-def run_openssl(arguments: list[str]) -> None:
-    subprocess.run(["openssl", *arguments], check=True)
+def verify_signature(manifest: Path, public_key: Path, signature: Path) -> None:
+    key = serialization.load_pem_public_key(public_key.read_bytes())
+    if not isinstance(key, Ed25519PublicKey):
+        raise ValueError("repository verification key must be Ed25519")
+    try:
+        key.verify(signature.read_bytes(), manifest.read_bytes())
+    except InvalidSignature as error:
+        raise ValueError("manifest signature verification failed") from error
 
 
 def main() -> int:
@@ -68,33 +81,25 @@ def main() -> int:
 
     if args.mode == "sign":
         signature = args.signature or args.manifest.with_suffix(args.manifest.suffix + ".sig")
+        if signature.exists() or signature.is_symlink():
+            raise FileExistsError(f"refusing to replace existing signature: {signature}")
         signature.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(prefix="pyrun-signature-", dir=signature.parent, delete=False) as output:
             temporary = Path(output.name)
         try:
-            run_openssl(
-                ["pkeyutl", "-sign", "-rawin", "-inkey", str(args.private_key), "-in", str(args.manifest), "-out", str(temporary)]
-            )
+            key = serialization.load_pem_private_key(args.private_key.read_bytes(), password=None)
+            if not isinstance(key, Ed25519PrivateKey):
+                raise ValueError("repository signing key must be Ed25519")
+            temporary.write_bytes(key.sign(args.manifest.read_bytes()))
+            if signature.exists() or signature.is_symlink():
+                raise FileExistsError(f"signature appeared during signing: {signature}")
             temporary.replace(signature)
         finally:
             temporary.unlink(missing_ok=True)
         print(f"Signed {args.manifest.name} -> {signature.name}")
         return 0
 
-    run_openssl(
-        [
-            "pkeyutl",
-            "-verify",
-            "-rawin",
-            "-pubin",
-            "-inkey",
-            str(args.public_key),
-            "-in",
-            str(args.manifest),
-            "-sigfile",
-            str(args.signature),
-        ]
-    )
+    verify_signature(args.manifest, args.public_key, args.signature)
     print(f"Verified {args.manifest.name}")
     return 0
 

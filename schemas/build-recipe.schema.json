@@ -4,7 +4,7 @@
   "title": "PyRun Android wheel build recipe",
   "type": "object",
   "additionalProperties": false,
-  "required": ["name", "version", "python_tag", "android_api_min", "abis", "license", "source_url", "build", "runtime_dependencies", "sbom"],
+  "required": ["name", "version", "python_tag", "android_api_min", "abis", "license", "source_url", "build", "patches", "runtime_dependencies", "sbom"],
   "properties": {
     "name": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$"},
     "version": {"type": "string", "minLength": 1, "maxLength": 64},
@@ -27,6 +27,18 @@
         "ndk": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
         "setuptools": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
         "wheel": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"}
+      }
+    },
+    "patches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {"type": "string", "pattern": "^patches/[A-Za-z0-9._/-]+$"},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        }
       }
     },
     "runtime_dependencies": {"type": "array", "items": {"type": "string"}},

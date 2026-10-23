@@ -25,3 +25,4 @@ test-command = "python -c \"import pyrun_native_probe; assert pyrun_native_probe
 [tool.cibuildwheel.android]
 archs = ["arm64_v8a", "x86_64"]
 build-frontend = "build"
+test-runtime = { args = ["--managed", "minVersion"] }
