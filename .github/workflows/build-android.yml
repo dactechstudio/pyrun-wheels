@@ -76,7 +76,9 @@ jobs:
         run: |
           sdkmanager="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
           test -x "$sdkmanager"
+          set +o pipefail
           yes | "$sdkmanager" --licenses >/dev/null
+          set -o pipefail
           "$sdkmanager" --install "ndk;30.0.16248370"
           echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/30.0.16248370" >> "$GITHUB_ENV"
 
@@ -150,7 +152,9 @@ jobs:
         run: |
           sdkmanager="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
           test -x "$sdkmanager"
+          set +o pipefail
           yes | "$sdkmanager" --licenses >/dev/null
+          set -o pipefail
           "$sdkmanager" --install "ndk;30.0.16248370"
           echo "ANDROID_NDK_HOME=${ANDROID_HOME}/ndk/30.0.16248370" >> "$GITHUB_ENV"
 
