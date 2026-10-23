@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import tempfile
 from pathlib import Path, PurePosixPath
 
@@ -70,7 +71,12 @@ def main() -> int:
     subparsers = parser.add_subparsers(dest="mode", required=True)
     sign = subparsers.add_parser("sign")
     sign.add_argument("manifest", type=Path)
-    sign.add_argument("--private-key", required=True, type=Path)
+    key_source = sign.add_mutually_exclusive_group(required=True)
+    key_source.add_argument("--private-key", type=Path)
+    key_source.add_argument(
+        "--private-key-env",
+        help="read an unencrypted PEM private key from this environment variable",
+    )
     sign.add_argument("--signature", type=Path)
     verify = subparsers.add_parser("verify")
     verify.add_argument("manifest", type=Path)
@@ -83,13 +89,20 @@ def main() -> int:
         signature = args.signature or args.manifest.with_suffix(args.manifest.suffix + ".sig")
         if signature.exists() or signature.is_symlink():
             raise FileExistsError(f"refusing to replace existing signature: {signature}")
+        if args.private_key is not None:
+            private_key_bytes = args.private_key.read_bytes()
+        else:
+            private_key_value = os.environ.get(args.private_key_env)
+            if not private_key_value:
+                raise ValueError(f"environment variable {args.private_key_env} is not set")
+            private_key_bytes = private_key_value.encode("utf-8")
+        key = serialization.load_pem_private_key(private_key_bytes, password=None)
+        if not isinstance(key, Ed25519PrivateKey):
+            raise ValueError("repository signing key must be Ed25519")
         signature.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(prefix="pyrun-signature-", dir=signature.parent, delete=False) as output:
             temporary = Path(output.name)
         try:
-            key = serialization.load_pem_private_key(args.private_key.read_bytes(), password=None)
-            if not isinstance(key, Ed25519PrivateKey):
-                raise ValueError("repository signing key must be Ed25519")
             temporary.write_bytes(key.sign(args.manifest.read_bytes()))
             if signature.exists() or signature.is_symlink():
                 raise FileExistsError(f"signature appeared during signing: {signature}")

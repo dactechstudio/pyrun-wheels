@@ -1,0 +1,109 @@
+name: Sign and promote wheel snapshot
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_workflow_run_id:
+        description: Successful build-android.yml run ID from main
+        required: true
+        type: string
+      release_id:
+        description: New immutable snapshot identifier (letters, numbers, dot, underscore, hyphen)
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  sign-and-promote:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment:
+      name: wheel-release
+    permissions:
+      actions: read
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_WORKFLOW_RUN_ID: ${{ inputs.source_workflow_run_id }}
+      RELEASE_ID: ${{ inputs.release_id }}
+      PYRUN_ED25519_PRIVATE_KEY: ${{ secrets.PYRUN_ED25519_PRIVATE_KEY }}
+    steps:
+      - name: Check out release policy and verification key
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Set up CPython
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.13.17"
+
+      - name: Install pinned repository tooling
+        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
+
+      - name: Validate source build run and release identifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_WORKFLOW_RUN_ID" =~ ^[0-9]{1,20}$ ]] || {
+            echo "source_workflow_run_id must be a numeric GitHub Actions run ID" >&2
+            exit 1
+          }
+          [[ "$RELEASE_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ && "$RELEASE_ID" != *..* ]] || {
+            echo "release_id must be 1-64 safe characters and cannot contain '..'" >&2
+            exit 1
+          }
+          metadata="$(gh run view "$SOURCE_WORKFLOW_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --json workflowName,headBranch,event,status,conclusion)"
+          printf '%s' "$metadata" | jq -e '
+            .workflowName == "Build and verify Android wheels" and
+            .headBranch == "main" and
+            (.event == "push" or .event == "workflow_dispatch") and
+            .status == "completed" and
+            .conclusion == "success"
+          ' >/dev/null || {
+            echo "The source run must be a successful build-android.yml run on main" >&2
+            exit 1
+          }
+          test -s keys/pyrun-ed25519-public.pem || {
+            echo "Commit the generated public verification key at keys/pyrun-ed25519-public.pem first" >&2
+            exit 1
+          }
+          test -n "$PYRUN_ED25519_PRIVATE_KEY" || {
+            echo "Configure PYRUN_ED25519_PRIVATE_KEY in the protected wheel-release environment" >&2
+            exit 1
+          }
+
+      - name: Download unsigned review snapshot from the verified build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/repository
+          gh run download "$SOURCE_WORKFLOW_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name simple-repository-snapshot --dir dist/repository
+
+      - name: Sign and verify the exact manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/sign_manifest.py sign dist/repository/manifest.json \
+            --private-key-env PYRUN_ED25519_PRIVATE_KEY
+          python scripts/sign_manifest.py verify dist/repository/manifest.json \
+            --public-key keys/pyrun-ed25519-public.pem \
+            --signature dist/repository/manifest.json.sig
+
+      - name: Promote into a fresh release directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/promote_snapshot.py dist/repository "dist/releases/$RELEASE_ID" \
+            --public-key keys/pyrun-ed25519-public.pem
+
+      - name: Upload signed snapshot for reviewed publication
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: signed-wheel-snapshot-${{ inputs.release_id }}
+          path: dist/releases/${{ inputs.release_id }}
+          if-no-files-found: error
+          retention-days: 90

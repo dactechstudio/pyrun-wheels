@@ -35,6 +35,13 @@ this phase does not mean arbitrary PyPI packages can be installed by PyRun.
   and SBOM. The proof recipe currently has no patches or runtime dependencies.
 - Ed25519 sign/verify tooling. The signed manifest covers the Simple index,
   wheels, recipe, patches and SBOM hashes.
+- Safe Ed25519 keypair generator: private output is required outside the repo,
+  public output is restricted to `keys/`, and existing files are never replaced.
+- Separate, manual signed-snapshot workflow. It accepts only a successful build
+  run on `main`, uses the protected `wheel-release` environment, reads the
+  private PEM from a GitHub secret without writing it to disk, verifies the
+  signature, promotes into a fresh directory, and uploads a signed review
+  artifact. It has read-only GitHub permissions and never runs for PRs/pushes.
 - PEP 592 yank policy with reason, plus tests that build the corresponding
   `data-yanked` index entries.
 - Immutable snapshot staging and signed promotion/rollback into a fresh
@@ -58,26 +65,33 @@ integration must decide how package delivery is Play-compliant before enabling
 installation; unsigned or arbitrary native wheels must not be executed by the
 Play-distributed app.
 
-## Security boundary / user setup still required for production publishing
+## Security boundary / remaining release setup
 
-The GitHub Actions workflow does not publish executable wheels to Pages or
-create a release. Production trust requires an Ed25519 public key pinned by the
-consuming app and its matching private key held in a GitHub protected
-environment. No signing key was generated, committed, or uploaded as part of
-this phase. Do not promote an unsigned Actions artifact.
+The build workflow does not publish executable wheels to Pages or create a
+GitHub Release. The separate signing workflow produces a signed review artifact
+only. Before it can run, the owner must generate an Ed25519 keypair, commit the
+public key at `keys/pyrun-ed25519-public.pem`, and add the private PEM as the
+`PYRUN_ED25519_PRIVATE_KEY` secret in a protected GitHub environment named
+`wheel-release`. Configure required reviewers and restrict deployment branches
+to `main`. No production key was generated or stored by this repository work.
 
-Inspect the two ABI artifacts and the `simple-repository-snapshot` artifact.
+The consuming app must independently pin and verify the public key before
+trusting a repository snapshot. Public Pages/GitHub Release deployment remains
+unimplemented until the app-side trust policy and repository hosting procedure
+are reviewed. Never promote or consume an unsigned Actions artifact as trusted.
+
 The x86_64 import smoke test is automated; the ARM64 wheel has build,
 repeatability and static ABI/ELF verification only until an emulator-capable
-ARM64 test runner is available. A release workflow and Pages settings should
-be enabled only after the production key has been created and the public key's
-app-side trust/policy has been reviewed.
+ARM64 test runner is available. The unsigned `simple-repository-snapshot` is a
+temporary build artifact for review; the signed workflow output is also a
+temporary review artifact, not a public package index.
 
 ## Verification
 
-Local Windows verification runs the repository unit tests. The authoritative
-Android wheel builds and 16 KB checks run in GitHub Actions on the
+Local Windows verification runs the repository unit tests, including keypair
+path protections, secret-environment signing, and release-workflow policy. The
+authoritative Android wheel builds and 16 KB checks run in GitHub Actions on the
 corresponding native-architecture runner. The x86_64 import check runs in the
 managed emulator; the GitHub-hosted macOS ARM emulator attempt failed, so ARM64
-import coverage is explicitly not claimed. Phase 17 is not started by this
-file.
+import coverage is explicitly not claimed. Public deployment and live signing
+remain pending owner-provided key setup. Phase 17 is not started by this file.

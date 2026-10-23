@@ -5,6 +5,7 @@ import base64
 import csv
 import io
 import json
+import os
 import stat
 import sys
 import tempfile
@@ -22,6 +23,7 @@ from packaging.requirements import Requirement
 import yaml
 
 from scripts.sign_manifest import main as sign_manifest_main, validate_manifest
+from scripts.generate_signing_key import generate_keypair
 from scripts.promote_snapshot import promote
 from scripts.yank_version import update_policy
 from scripts.compare_wheels import compare
@@ -130,6 +132,107 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             'find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -name llvm-readelf',
             stage_verify["run"],
         )
+
+    def test_signing_workflow_is_separate_manual_protected_and_read_only(self) -> None:
+        workflow_path = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "sign-snapshot.yml"
+        workflow = yaml.load(workflow_path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+        self.assertIn("workflow_dispatch", workflow["on"])
+        self.assertEqual(workflow["permissions"], {"actions": "read", "contents": "read"})
+        job = workflow["jobs"]["sign-and-promote"]
+        self.assertEqual(job["if"], "github.ref == 'refs/heads/main'")
+        self.assertEqual(job["environment"]["name"], "wheel-release")
+        self.assertEqual(job["permissions"], {"actions": "read", "contents": "read"})
+        self.assertEqual(job["env"]["PYRUN_ED25519_PRIVATE_KEY"], "${{ secrets.PYRUN_ED25519_PRIVATE_KEY }}")
+        step_names = {step["name"] for step in job["steps"]}
+        self.assertIn("Validate source build run and release identifier", step_names)
+        self.assertIn("Sign and verify the exact manifest", step_names)
+        self.assertIn("Promote into a fresh release directory", step_names)
+        self.assertIn("Upload signed snapshot for reviewed publication", step_names)
+        for step in job["steps"]:
+            if step.get("uses"):
+                self.assertRegex(step["uses"], r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[0-9a-f]{40}(?:\s+# .+)?$")
+
+    def test_key_generation_keeps_private_key_outside_repo_and_refuses_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            repository = root / "repo"
+            key_directory = repository / "keys"
+            key_directory.mkdir(parents=True)
+            private_key = root / "protected" / "pyrun-ed25519-private.pem"
+            public_key = key_directory / "pyrun-ed25519-public.pem"
+
+            created_private, created_public = generate_keypair(private_key, public_key, repository)
+            self.assertEqual(created_private, private_key.resolve())
+            self.assertEqual(created_public, public_key.resolve())
+            private = serialization.load_pem_private_key(private_key.read_bytes(), password=None)
+            public = serialization.load_pem_public_key(public_key.read_bytes())
+            self.assertIsInstance(private, Ed25519PrivateKey)
+            self.assertEqual(
+                private.public_key().public_bytes(
+                    serialization.Encoding.PEM,
+                    serialization.PublicFormat.SubjectPublicKeyInfo,
+                ),
+                public.public_bytes(
+                    serialization.Encoding.PEM,
+                    serialization.PublicFormat.SubjectPublicKeyInfo,
+                ),
+            )
+            with self.assertRaisesRegex(ValueError, "outside the repository"):
+                generate_keypair(repository / "private.pem", key_directory / "another-public.pem", repository)
+            with self.assertRaisesRegex(FileExistsError, "refusing to replace"):
+                generate_keypair(private_key, public_key, repository)
+
+    def test_signer_reads_private_key_from_secret_environment_variable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wheels = root / "wheels"
+            wheels.mkdir()
+            make_wheel(wheels, "x86_64")
+            make_wheel(wheels, "arm64_v8a")
+            snapshot = root / "snapshot"
+            stage(wheels, snapshot, "e" * 40)
+            key = Ed25519PrivateKey.generate()
+            private_bytes = key.private_bytes(
+                serialization.Encoding.PEM,
+                serialization.PrivateFormat.PKCS8,
+                serialization.NoEncryption(),
+            )
+            public_key = root / "public.pem"
+            public_key.write_bytes(
+                key.public_key().public_bytes(
+                    serialization.Encoding.PEM,
+                    serialization.PublicFormat.SubjectPublicKeyInfo,
+                )
+            )
+            with (
+                patch.dict(os.environ, {"PYRUN_TEST_SIGNING_KEY": private_bytes.decode("utf-8")}),
+                patch.object(
+                    sys,
+                    "argv",
+                    [
+                        "sign_manifest.py",
+                        "sign",
+                        str(snapshot / "manifest.json"),
+                        "--private-key-env",
+                        "PYRUN_TEST_SIGNING_KEY",
+                    ],
+                ),
+            ):
+                sign_manifest_main()
+            signature = snapshot / "manifest.json.sig"
+            self.assertTrue(signature.is_file())
+            with patch.object(
+                sys,
+                "argv",
+                [
+                    "sign_manifest.py", "verify", str(snapshot / "manifest.json"),
+                    "--public-key", str(public_key), "--signature", str(signature),
+                ],
+            ):
+                sign_manifest_main()
+            release = root / "promoted"
+            promote(snapshot, release, public_key)
+            self.assertEqual((release / "manifest.json.sig").read_bytes(), signature.read_bytes())
 
     def test_verifies_abi_machine_hash_and_16kb_load_alignment(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

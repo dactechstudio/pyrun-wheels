@@ -38,6 +38,13 @@ binaries; its unsigned snapshot is an Actions artifact retained for 14 days.
 Manual workflow dispatch also runs the supported emulator test by default; it
 can be disabled for a build-only diagnostic run.
 
+The separate `Sign and promote wheel snapshot` workflow is manually dispatched
+from `main`. It accepts only a successful `build-android.yml` run on `main`,
+requires the protected `wheel-release` environment, signs and verifies the
+manifest with Ed25519, promotes it into a new release directory, and uploads a
+90-day signed review artifact. It does not publish to Pages or create a GitHub
+Release.
+
 No physical device is required for the x86_64 smoke test. Full arm64-v8a import
 smoke coverage needs a runner that can provide a working Android ARM64
 emulator. See [`PHASE16.md`](PHASE16.md) for status, signing, yank, and rollback
@@ -75,10 +82,29 @@ generated PEP 503 index as well as every wheel. `playRuntimeInstallAllowed` is
 always false: the Play app must not download or execute native wheels at
 runtime.
 
-Generate a production Ed25519 keypair in a controlled environment; keep the
-private key outside Git and store it only in a protected release environment.
+Generate a production Ed25519 keypair in a controlled environment. The helper
+refuses to put the private key inside this repository and refuses to overwrite
+either output. Only commit the public key. Store the private PEM only as the
+`PYRUN_ED25519_PRIVATE_KEY` secret in the protected GitHub Actions environment
+named `wheel-release`; configure required reviewers and restrict deployments to
+`main`. Never paste the private key into chat, an issue, or a workflow file.
 The app must independently pin the public key before it trusts any repository
 snapshot. Do not publish or consume unsigned snapshots as trusted releases.
+
+On Windows PowerShell, from the repository root, for example:
+
+```powershell
+$privateKey = Join-Path $env:USERPROFILE 'pyrun-signing\pyrun-ed25519-private.pem'
+.venv\Scripts\python.exe scripts\generate_signing_key.py --private-key $privateKey
+```
+
+The command creates `keys/pyrun-ed25519-public.pem` for review and commit, and
+creates the private key under your user profile. Add the exact private PEM text
+as the GitHub environment secret; do not commit or upload the private file as
+an Actions artifact. Then dispatch `Sign and promote wheel snapshot` from
+`main`, provide the run ID of a successful `Build and verify Android wheels`
+run on `main`, and choose a new release ID. The resulting artifact remains an
+unpublished review snapshot until a separately reviewed publisher is configured.
 
 ```sh
 python scripts/sign_manifest.py sign dist/repository/manifest.json \
