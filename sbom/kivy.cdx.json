@@ -7,7 +7,7 @@
     "properties": [
       {
         "name": "pyrun:release-status",
-        "value": "experimental; no Kivy wheel build or Android runtime test has completed"
+        "value": "approved for signed wheel release after both ABI builds and static verification; Android runtime test was not run"
       },
       {
         "name": "pyrun:android-abis",

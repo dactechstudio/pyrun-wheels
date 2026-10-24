@@ -22,7 +22,7 @@ on:
         type: boolean
         default: true
       build_kivy:
-        description: Build experimental Kivy and SDL2 Android wheels for both ABIs
+        description: Build Kivy and SDL2 Android wheels for both ABIs
         required: true
         type: boolean
         default: false
@@ -229,7 +229,7 @@ jobs:
             --abi "${{ matrix.abi }}" \
             --github-env "$GITHUB_ENV"
 
-      - name: Build experimental Kivy wheel without device/emulator execution
+      - name: Build Kivy wheel without device/emulator execution
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_kivy == true }}
         shell: bash
         env:
@@ -308,7 +308,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload experimental Kivy wheel for reviewed snapshot staging
+      - name: Upload Kivy wheel for reviewed snapshot staging
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_kivy == true }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:

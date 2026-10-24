@@ -5,7 +5,7 @@
   "android_api_min": 25,
   "abis": ["arm64_v8a", "x86_64"],
   "license": "MIT",
-  "release_status": "experimental",
+  "release_status": "approved",
   "source_url": "https://github.com/kivy/kivy",
   "source_revision": "20d74dcd30f143abbd1aa94c76bafc5bd934d5bd",
   "build": {

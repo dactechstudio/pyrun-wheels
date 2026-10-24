@@ -228,9 +228,9 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             if step["name"] in {
                 "Prepare pinned Kivy source",
                 "Configure Kivy against PyRun's SDL2 build",
-                "Build experimental Kivy wheel without device/emulator execution",
+                "Build Kivy wheel without device/emulator execution",
                 "Verify Kivy wheel modules, SDL linkage, and 16 KB ELF alignment",
-                "Upload experimental Kivy wheel for reviewed snapshot staging",
+                "Upload Kivy wheel for reviewed snapshot staging",
             }
         ]
         self.assertEqual(len(kivy_steps), 5)
@@ -276,14 +276,14 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             },
         )
 
-    def test_kivy_recipe_is_pinned_for_both_abis_and_experimental(self) -> None:
+    def test_kivy_recipe_is_approved_after_both_abi_builds(self) -> None:
         root = Path(__file__).resolve().parents[1]
         recipe = json.loads((root / "recipes" / "kivy" / "recipe.json").read_text(encoding="utf-8"))
         schema = json.loads((root / "schemas" / "build-recipe.schema.json").read_text(encoding="utf-8"))
         validate(instance=recipe, schema=schema)
         self.assertEqual(recipe["name"], "Kivy")
         self.assertEqual(recipe["version"], "2.3.1")
-        self.assertEqual(recipe["release_status"], "experimental")
+        self.assertEqual(recipe["release_status"], "approved")
         self.assertEqual(set(recipe["abis"]), {"arm64_v8a", "x86_64"})
         self.assertEqual(recipe["source_revision"], "20d74dcd30f143abbd1aa94c76bafc5bd934d5bd")
         self.assertEqual(recipe["build"]["kivy_cython"], "3.0.11")
