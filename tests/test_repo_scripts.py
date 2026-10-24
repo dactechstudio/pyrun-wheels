@@ -208,6 +208,9 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             pygame_steps[3]["env"]["CIBW_ENVIRONMENT_ANDROID"],
             "${{ matrix.abi == 'x86_64' && 'PYGAME_ANDROID=1 PYGAME_DETECT_AVX2=1' || 'PYGAME_ANDROID=1' }}",
         )
+        repair_command = pygame_steps[3]["env"]["CIBW_REPAIR_WHEEL_COMMAND_ANDROID"]
+        for shared_sdl in ("libSDL2.so", "libSDL2_image.so", "libSDL2_mixer.so", "libSDL2_ttf.so"):
+            self.assertIn(f"--exclude {shared_sdl}", repair_command)
 
     def test_pygame_recipe_pins_android_source_stack_and_build_inputs(self) -> None:
         root = Path(__file__).resolve().parents[1]
