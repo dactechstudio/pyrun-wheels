@@ -113,7 +113,10 @@ def _stage_into(
     toolchain = tomllib.loads((ROOT / "toolchain.lock").read_text(encoding="utf-8"))
     for key in groups:
         recipe = recipes[key]["data"]
-        for field in ("ndk", "setuptools", "wheel", "cibuildwheel", "cmake", "cython", "ninja"):
+        for field in (
+            "ndk", "setuptools", "wheel", "cibuildwheel", "cmake", "cython",
+            "kivy_cython", "ninja", "packaging",
+        ):
             if field not in recipe["build"]:
                 continue
             if recipe["build"][field] != str(toolchain[field]):

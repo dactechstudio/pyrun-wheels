@@ -21,6 +21,11 @@ on:
         required: true
         type: boolean
         default: true
+      build_kivy:
+        description: Build experimental Kivy and SDL2 Android wheels for both ABIs
+        required: true
+        type: boolean
+        default: false
       restage_from_build_run_id:
         description: Re-stage previously verified wheel artifacts after recipe or SBOM review, without rebuilding
         required: false
@@ -174,7 +179,7 @@ jobs:
             --expected-abi "${{ matrix.abi }}" --android-api 25 --readelf "$PYRUN_NDK_LLVM_READELF"
 
       - name: Prepare pinned Pygame and SDL sources
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_pygame == true }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_pygame == true || inputs.build_kivy == true }}
         shell: bash
         run: |
           python scripts/prepare_pygame_source.py \
@@ -182,7 +187,7 @@ jobs:
             --cache-dir "$RUNNER_TEMP/pygame-source-cache"
 
       - name: Build the pinned SDL2 runtime for this ABI
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_pygame == true }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_pygame == true || inputs.build_kivy == true }}
         shell: bash
         run: |
           python -m pip install --disable-pip-version-check "cmake==3.31.6" "ninja==1.13.0"
@@ -201,6 +206,57 @@ jobs:
             --source-root "$RUNNER_TEMP/pygame-source" \
             --native-build "$RUNNER_TEMP/pygame-sdl-build" \
             --abi "${{ matrix.abi }}"
+
+      - name: Prepare pinned Kivy source
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_kivy == true }}
+        shell: bash
+        run: |
+          python scripts/prepare_kivy_source.py \
+            --output-dir "$RUNNER_TEMP/kivy-source" \
+            --cache-dir "$RUNNER_TEMP/kivy-source-cache"
+
+      - name: Configure Kivy against PyRun's SDL2 build
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_kivy == true }}
+        shell: bash
+        run: |
+          prebuilt="$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -mindepth 1 -maxdepth 1 -type d -print -quit)"
+          test -n "$prebuilt" && test -d "$prebuilt/sysroot"
+          echo "NDKPLATFORM=$prebuilt/sysroot" >> "$GITHUB_ENV"
+          python scripts/configure_kivy_android.py \
+            --kivy-source "$RUNNER_TEMP/kivy-source/kivy-20d74dcd30f143abbd1aa94c76bafc5bd934d5bd" \
+            --source-root "$RUNNER_TEMP/pygame-source" \
+            --native-build "$RUNNER_TEMP/pygame-sdl-build" \
+            --abi "${{ matrix.abi }}" \
+            --github-env "$GITHUB_ENV"
+
+      - name: Build experimental Kivy wheel without device/emulator execution
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_kivy == true }}
+        shell: bash
+        env:
+          CIBW_TEST_SKIP: "*"
+          CIBW_ENVIRONMENT_ANDROID: >-
+            NDKPLATFORM=${{ env.NDKPLATFORM }} LIBLINK=1 PYRUN_ANDROID=1
+            KIVY_USE_SDL2=1 KIVY_USE_OPENGL_ES2=1 KIVY_SPLIT_EXAMPLES=1
+            KIVY_SDL2_PATH=${{ env.KIVY_SDL2_PATH }}
+          CIBW_REPAIR_WHEEL_COMMAND_ANDROID: >-
+            auditwheel repair --exclude libSDL2.so --exclude libSDL2_image.so
+            --exclude libSDL2_mixer.so --exclude libSDL2_ttf.so
+            --ldpaths {ldpaths} -w {dest_dir} {wheel}
+          CIBW_BEFORE_BUILD: >-
+            python -m pip install --disable-pip-version-check
+            setuptools==80.9.0 wheel==0.45.1 Cython==3.0.11 packaging==25.0
+        run: |
+          python -m cibuildwheel --platform android \
+            --archs "${{ matrix.cibw_arch }}" \
+            --output-dir kivy-wheelhouse \
+            "$RUNNER_TEMP/kivy-source/kivy-20d74dcd30f143abbd1aa94c76bafc5bd934d5bd"
+
+      - name: Verify Kivy wheel modules, SDL linkage, and 16 KB ELF alignment
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_kivy == true }}
+        shell: bash
+        run: |
+          python scripts/verify_kivy_wheel.py kivy-wheelhouse/*.whl \
+            --expected-abi "${{ matrix.abi }}" --android-api 25 --readelf "$PYRUN_NDK_LLVM_READELF"
 
       - name: Build Pygame wheel without device/emulator execution
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_pygame == true }}
@@ -249,6 +305,15 @@ jobs:
         with:
           name: wheels-pygame-${{ matrix.abi }}
           path: pygame-wheelhouse/*.whl
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload experimental Kivy wheel for reviewed snapshot staging
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_kivy == true }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: wheels-kivy-${{ matrix.abi }}
+          path: kivy-wheelhouse/*.whl
           if-no-files-found: error
           retention-days: 14
 
@@ -377,17 +442,18 @@ jobs:
             --pattern 'wheels-*' --dir downloaded-wheels
           find downloaded-wheels -type f -name '*.whl' -exec cp -n {} wheelhouse/ \;
           count="$(find wheelhouse -maxdepth 1 -type f -name '*.whl' | wc -l)"
-          [[ "$count" -eq 2 || "$count" -eq 4 || "$count" -eq 6 ]] || {
-            echo "Expected probe, Pygame, and optional OpenCV wheels for both ABIs; found $count" >&2
+          [[ "$count" -eq 2 || "$count" -eq 4 || "$count" -eq 6 || "$count" -eq 8 ]] || {
+            echo "Expected probe plus zero, one, two, or three optional packages for both ABIs; found $count" >&2
             exit 1
           }
           for abi in arm64_v8a x86_64; do
             test -f "wheelhouse/pyrun_native_probe-0.1.0-cp313-cp313-android_25_"$abi".whl"
           done
-          for package in pygame opencv; do
+          for package in pygame opencv kivy; do
             case "$package" in
               pygame) pattern='pygame-2.6.1-cp313-cp313-android_25_*.whl' ;;
               opencv) pattern='opencv_python_headless-4.11.0.86-cp313-cp313-android_25_*.whl' ;;
+              kivy) pattern='kivy-2.3.1-cp313-cp313-android_25_*.whl' ;;
             esac
             package_count="$(find wheelhouse -maxdepth 1 -type f -name "$pattern" | wc -l)"
             [[ "$package_count" -eq 0 || "$package_count" -eq 2 ]] || {

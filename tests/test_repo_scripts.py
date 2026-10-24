@@ -28,6 +28,13 @@ from scripts.promote_snapshot import promote
 from scripts.prepare_pages_site import prepare_pages_site
 from scripts.prepare_pygame_source import add_android_license_notices, add_native_license_notices
 from scripts.configure_pygame_android import configure as configure_pygame_android
+from scripts.prepare_kivy_source import prepare_android_source as prepare_kivy_android_source
+from scripts.configure_kivy_android import configure as configure_kivy_android
+from scripts.verify_kivy_wheel import (
+    extension_modules as kivy_extension_modules,
+    normalize_wheel_filename as normalize_kivy_wheel_filename,
+    verify_kivy as verify_kivy_wheel,
+)
 from scripts.yank_version import update_policy
 from scripts.compare_wheels import compare
 from scripts.stage_simple_index import stage
@@ -123,6 +130,10 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             "true",
         )
         self.assertEqual(
+            workflow["on"]["workflow_dispatch"]["inputs"]["build_kivy"]["default"],
+            "false",
+        )
+        self.assertEqual(
             workflow["on"]["workflow_dispatch"]["inputs"]["restage_from_build_run_id"]["default"],
             "",
         )
@@ -212,6 +223,23 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         for shared_sdl in ("libSDL2.so", "libSDL2_image.so", "libSDL2_mixer.so", "libSDL2_ttf.so"):
             self.assertIn(f"--exclude {shared_sdl}", repair_command)
 
+        kivy_steps = [
+            step for step in workflow["jobs"]["build"]["steps"]
+            if step["name"] in {
+                "Prepare pinned Kivy source",
+                "Configure Kivy against PyRun's SDL2 build",
+                "Build experimental Kivy wheel without device/emulator execution",
+                "Verify Kivy wheel modules, SDL linkage, and 16 KB ELF alignment",
+                "Upload experimental Kivy wheel for reviewed snapshot staging",
+            }
+        ]
+        self.assertEqual(len(kivy_steps), 5)
+        self.assertTrue(all("inputs.build_kivy == true" in step["if"] for step in kivy_steps))
+        self.assertEqual(kivy_steps[2]["env"]["CIBW_TEST_SKIP"], "*")
+        self.assertEqual(kivy_steps[2]["env"]["CIBW_BEFORE_BUILD"].count("Cython==3.0.11"), 1)
+        for shared_sdl in ("libSDL2.so", "libSDL2_image.so", "libSDL2_mixer.so", "libSDL2_ttf.so"):
+            self.assertIn(f"--exclude {shared_sdl}", kivy_steps[2]["env"]["CIBW_REPAIR_WHEEL_COMMAND_ANDROID"])
+
     def test_pygame_recipe_pins_android_source_stack_and_build_inputs(self) -> None:
         root = Path(__file__).resolve().parents[1]
         recipe = json.loads((root / "recipes" / "pygame" / "recipe.json").read_text(encoding="utf-8"))
@@ -243,6 +271,141 @@ class AndroidWheelVerificationTests(unittest.TestCase):
                 "pygame/_sdl2/video": "pygame/_sdl2/video.cpython-313-aarch64-linux-android.so",
             },
         )
+
+    def test_kivy_recipe_is_pinned_for_both_abis_and_experimental(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        recipe = json.loads((root / "recipes" / "kivy" / "recipe.json").read_text(encoding="utf-8"))
+        schema = json.loads((root / "schemas" / "build-recipe.schema.json").read_text(encoding="utf-8"))
+        validate(instance=recipe, schema=schema)
+        self.assertEqual(recipe["name"], "Kivy")
+        self.assertEqual(recipe["version"], "2.3.1")
+        self.assertEqual(recipe["release_status"], "experimental")
+        self.assertEqual(set(recipe["abis"]), {"arm64_v8a", "x86_64"})
+        self.assertEqual(recipe["source_revision"], "20d74dcd30f143abbd1aa94c76bafc5bd934d5bd")
+        self.assertEqual(recipe["build"]["kivy_cython"], "3.0.11")
+        self.assertEqual(recipe["build"]["ninja"], "1.13.0")
+        for patch in recipe["patches"]:
+            self.assertEqual(
+                hashlib.sha256((root / patch["path"]).read_bytes()).hexdigest(),
+                patch["sha256"],
+            )
+        sbom = json.loads((root / recipe["sbom"]).read_text(encoding="utf-8"))
+        component_names = {component["name"] for component in sbom["components"]}
+        self.assertEqual("Kivy", sbom["metadata"]["component"]["name"])
+        self.assertTrue({"SDL2", "SDL2_image", "SDL2_mixer", "SDL2_ttf"} <= component_names)
+
+    def test_kivy_source_adaptations_are_exact_and_idempotence_safe(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "kivy" / "lang").mkdir(parents=True)
+            (root / "kivy" / "lib").mkdir(parents=True)
+            (root / "kivy" / "core" / "window").mkdir(parents=True)
+            (root / "kivy" / "core" / "clipboard").mkdir(parents=True)
+            (root / "kivy" / "lang" / "parser.py").write_text(
+                "                if isinstance(n, ast.Str):\n"
+                "                    # NOTE: required for python3.6\n"
+                "                    yield from cls.get_names_from_expression(n.s)\n"
+                "                else:\n"
+                "                    yield from cls.get_names_from_expression(n.value)\n",
+                encoding="utf-8",
+            )
+            (root / "kivy" / "lib" / "sdl2.pxi").write_text(
+                "    cdef void SDL_GL_SwapWindow(SDL_Window * window) nogil\n", encoding="utf-8"
+            )
+            (root / "kivy" / "core" / "window" / "_window_sdl2.pyx").write_text(
+                "        with nogil:\n            SDL_GL_SwapWindow(self.win)\n", encoding="utf-8"
+            )
+            clipboard = root / "kivy" / "core" / "clipboard" / "__init__.py"
+            clipboard.write_text("if platform == 'android':\n    _clipboards.append(\n", encoding="utf-8")
+            setup = root / "setup.py"
+            setup.write_text(
+                "if platform in ('ios', 'android'):\n"
+                "    # NEVER use or declare cython on these platforms\n"
+                "                [\n                    'setupconfig.py',\n                ] + binary_deps\n",
+                encoding="utf-8",
+            )
+            (root / "pyproject.toml").write_text(
+                '"setuptools~=69.2.0"\n"wheel~=0.44.0"\n"packaging~=24.0"\n'
+                '"cython>=0.29.1,<=3.0.11"\n',
+                encoding="utf-8",
+            )
+            (root / "LICENSE").write_text("Kivy MIT notice", encoding="utf-8")
+
+            prepare_kivy_android_source(root)
+
+            self.assertIn("SDL_GL_SwapWindow(SDL_Window * window) nogil\n", (root / "kivy" / "lib" / "sdl2.pxi").read_text(encoding="utf-8"))
+            window_source = (root / "kivy" / "core" / "window" / "_window_sdl2.pyx").read_text(encoding="utf-8")
+            self.assertEqual(1, window_source.count("with nogil:\n            SDL_GL_SwapWindow"))
+            self.assertIn("platform == 'android' and not USE_SDL2", clipboard.read_text(encoding="utf-8"))
+            self.assertTrue((root / "kivy" / "LICENSE.txt").is_file())
+
+    def test_kivy_sdl_configuration_validates_headers_and_links_page_aligned_extensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source_root = root / "source"
+            native = root / "native"
+            kivy = root / "kivy"
+            (kivy).mkdir()
+            (kivy / "setup.py").write_text(
+                "ext_modules = get_extensions_from_sources(sources)\n", encoding="utf-8"
+            )
+            from scripts.configure_kivy_android import SOURCE_DIRS
+            for _name, (parent, source, include, header) in SOURCE_DIRS.items():
+                include_dir = source_root / parent / source / include
+                include_dir.mkdir(parents=True)
+                (include_dir / header).write_text("header", encoding="utf-8")
+            for library in ("libSDL2.so", "libSDL2_image.so", "libSDL2_mixer.so", "libSDL2_ttf.so"):
+                library_dir = native / "lib"
+                library_dir.mkdir(parents=True, exist_ok=True)
+                (library_dir / library).write_bytes(b"fixture")
+
+            configured = configure_kivy_android(kivy, source_root, native, "x86_64")
+
+            self.assertIn(str((native / "lib").resolve()), configured)
+            self.assertEqual(1, (kivy / "setup.py").read_text(encoding="utf-8").count("-Wl,-z,max-page-size=16384"))
+            with self.assertRaises(ValueError):
+                configure_kivy_android(kivy, source_root, native, "armeabi_v7a")
+
+    def test_kivy_wheel_verifier_canonicalizes_name_and_checks_expected_modules(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            wheel = root / "Kivy-2.3.1-cp313-cp313-android_25_x86_64.whl"
+            required = [
+                "kivy/core/window/_window_sdl2.cpython-313.so",
+                "kivy/core/image/_img_sdl2.cpython-313.so",
+                "kivy/core/text/_text_sdl2.cpython-313.so",
+                "kivy/core/audio/audio_sdl2.cpython-313.so",
+                "kivy/graphics/cgl_backend/cgl_sdl2.cpython-313.so",
+                "kivy/LICENSE.txt",
+                "kivy/data/fonts/Roboto-Regular.ttf",
+            ]
+            with zipfile.ZipFile(wheel, "w") as archive:
+                for name in required:
+                    archive.writestr(name, b"ELF" if name.endswith(".so") else b"notice")
+
+            normalized = normalize_kivy_wheel_filename(wheel, "x86_64", 25)
+            self.assertEqual("kivy-2.3.1-cp313-cp313-android_25_x86_64.whl", normalized.name)
+            with patch("scripts.verify_kivy_wheel.verify_wheel"), patch(
+                "scripts.verify_kivy_wheel.subprocess.run",
+                return_value=SimpleNamespace(stdout=(
+                    "Shared library: [libSDL2.so]\n"
+                    "Shared library: [libSDL2_image.so]\n"
+                    "Shared library: [libSDL2_mixer.so]\n"
+                    "Shared library: [libSDL2_ttf.so]\n"
+                )),
+            ):
+                verify_kivy_wheel(normalized, "x86_64", 25, "llvm-readelf")
+
+            self.assertEqual(
+                set(kivy_extension_modules(required)),
+                {
+                    "kivy/core/window/_window_sdl2",
+                    "kivy/core/image/_img_sdl2",
+                    "kivy/core/text/_text_sdl2",
+                    "kivy/core/audio/audio_sdl2",
+                    "kivy/graphics/cgl_backend/cgl_sdl2",
+                },
+            )
 
     def test_pygame_android_source_preserves_runtime_license_notices(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

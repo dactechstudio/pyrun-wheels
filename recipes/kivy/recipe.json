@@ -1,0 +1,43 @@
+{
+  "name": "Kivy",
+  "version": "2.3.1",
+  "python_tag": "cp313-cp313",
+  "android_api_min": 25,
+  "abis": ["arm64_v8a", "x86_64"],
+  "license": "MIT",
+  "release_status": "experimental",
+  "source_url": "https://github.com/kivy/kivy",
+  "source_revision": "20d74dcd30f143abbd1aa94c76bafc5bd934d5bd",
+  "build": {
+    "cibuildwheel": "4.3.1",
+    "ndk": "30.0.16248370",
+    "setuptools": "80.9.0",
+    "wheel": "0.45.1",
+    "packaging": "25.0",
+    "kivy_cython": "3.0.11",
+    "cmake": "3.31.6",
+    "ninja": "1.13.0"
+  },
+  "patches": [
+    {
+      "path": "scripts/prepare_kivy_source.py",
+      "sha256": "0039ec452c3d577270b3bb67658e1d8e4147e37bc24059e2920a6a84ce83a611"
+    },
+    {
+      "path": "scripts/configure_kivy_android.py",
+      "sha256": "7ac16671d213891fbc1d13055a720b2eecbda19f6fc8fe41a5a94ddbc1533930"
+    },
+    {
+      "path": "scripts/verify_kivy_wheel.py",
+      "sha256": "67e60b46f41d87759de3bbb8aa973249457f30a20cdffe93381d936d6771e0a9"
+    }
+  ],
+  "runtime_dependencies": [
+    "Kivy-Garden==0.1.5",
+    "docutils==0.23",
+    "Pygments==2.21.0",
+    "filetype==1.2.0",
+    "requests==2.34.2"
+  ],
+  "sbom": "sbom/kivy.cdx.json"
+}

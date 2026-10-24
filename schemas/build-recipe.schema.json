@@ -34,8 +34,10 @@
         "setuptools": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
         "wheel": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
         "cython": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+        "kivy_cython": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
         "cmake": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
         "ninja": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+        "packaging": {"type": "string", "pattern": "^\\d+\\.\\d+(?:\\.\\d+)?$"},
         "numpy": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
         "scikit_build": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"}
       }
