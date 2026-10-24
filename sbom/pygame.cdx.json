@@ -84,6 +84,23 @@
       "name": "minimp3",
       "licenses": [{ "license": { "id": "CC0-1.0" } }],
       "purl": "pkg:github/lieff/minimp3"
+    },
+    {
+      "type": "library",
+      "name": "libpng",
+      "version": "1.6.59",
+      "licenses": [{ "license": { "id": "libpng-2.0" } }],
+      "purl": "pkg:github/pnggroup/libpng@v1.6.59"
+    },
+    {
+      "type": "library",
+      "name": "libjpeg-turbo",
+      "version": "3.2.0",
+      "licenses": [
+        { "license": { "name": "IJG License", "url": "https://github.com/libjpeg-turbo/libjpeg-turbo/blob/3.2.0/README.ijg" } },
+        { "license": { "id": "BSD-3-Clause" } }
+      ],
+      "purl": "pkg:github/libjpeg-turbo/libjpeg-turbo@3.2.0"
     }
   ],
   "dependencies": [
@@ -94,7 +111,9 @@
         "pkg:github/libsdl-org/SDL_image@2.8.12",
         "pkg:github/libsdl-org/SDL_mixer@2.8.2",
         "pkg:github/libsdl-org/SDL_ttf@2.24.0",
-        "pkg:github/pygame/pygame@2.6.1#src_c/SDL_gfx"
+        "pkg:github/pygame/pygame@2.6.1#src_c/SDL_gfx",
+        "pkg:github/pnggroup/libpng@v1.6.59",
+        "pkg:github/libjpeg-turbo/libjpeg-turbo@3.2.0"
       ]
     },
     {
@@ -138,6 +157,14 @@
     },
     {
       "ref": "pkg:github/lieff/minimp3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:github/pnggroup/libpng@v1.6.59",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:github/libjpeg-turbo/libjpeg-turbo@3.2.0",
       "dependsOn": []
     }
   ]

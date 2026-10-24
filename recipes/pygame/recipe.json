@@ -20,23 +20,23 @@
   "patches": [
     {
       "path": "recipes/pygame/CMakeLists.txt",
-      "sha256": "767b5f4e9619706f309707f055b9245620931d09046d6b677a065e7d98246fd8"
+      "sha256": "833b36e1508bd24e6d2e7450de9c292219ca09a9e1bb67e84fc1d0ba4128bcd4"
     },
     {
       "path": "scripts/prepare_pygame_source.py",
-      "sha256": "54b84c796937c3c5168c2ceab5c6f91e172a513c1044304a60d895539423c472"
+      "sha256": "2216787be95f93db998d026f60e1531762aeda2c971f417d517d38f4e1a4cbeb"
     },
     {
       "path": "scripts/build_pygame_sdl.py",
-      "sha256": "5ea29825590eeca8cda3b5936e3fd580988253798a45403125269b2fa558725c"
+      "sha256": "8c42f85e6c02d91db51865469640aef7f6558b4e73fa8a46103f1f85f93fff73"
     },
     {
       "path": "scripts/configure_pygame_android.py",
-      "sha256": "03c212563a2bae1568323a41e1992d714a02003809162b46398893b5b35736f9"
+      "sha256": "31a517e3e84829df6ac120a5d347c889fae01161c3ed889e4392af2a852c0489"
     },
     {
       "path": "scripts/verify_pygame_wheel.py",
-      "sha256": "0c6c0473204dc57130b4effafc59f436ec098fbe5041d54f99faccc75d1f2786"
+      "sha256": "5272e169e3135c90aee36704f6b42ecad67da2560f4ea2dd6a96ff822fee2ce3"
     }
   ],
   "runtime_dependencies": [],

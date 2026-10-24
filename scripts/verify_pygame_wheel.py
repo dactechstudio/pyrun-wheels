@@ -79,7 +79,12 @@ def verify_pygame(wheel: Path, abi: str, android_api: int, readelf: str) -> None
     verify_wheel(wheel, abi, android_api, readelf)
     with zipfile.ZipFile(wheel) as archive:
         members = archive.namelist()
-        for notice in ("LICENSE.txt", "LICENSE.sdl_gfx.txt"):
+        for notice in (
+            "LICENSE.txt",
+            "LICENSE.sdl_gfx.txt",
+            "LICENSE.libpng.txt",
+            "LICENSE.libjpeg-turbo.txt",
+        ):
             if not any(name == f"pygame/{notice}" or name.endswith(f"/data/pygame/{notice}") for name in members):
                 raise ValueError(f"{wheel.name}: missing required Pygame license notice {notice}")
         modules = extension_modules(archive.namelist())

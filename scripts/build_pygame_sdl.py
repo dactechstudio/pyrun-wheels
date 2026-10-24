@@ -15,10 +15,14 @@ SOURCE_DIRS = {
     "SDL_IMAGE": "SDL_image-release-2.8.12/SDL_image-release-2.8.12",
     "SDL_MIXER": "SDL_mixer-release-2.8.2/SDL_mixer-release-2.8.2",
     "SDL_TTF": "SDL_ttf-release-2.24.0/SDL_ttf-release-2.24.0",
+    "LIBPNG": "libpng-1.6.59/libpng-1.6.59",
 }
 
 
 def build(source_root: Path, build_dir: Path, ndk_root: Path, abi: str) -> Path:
+    source_root = source_root.resolve()
+    build_dir = build_dir.resolve()
+    ndk_root = ndk_root.resolve()
     if abi not in ABI_TO_ANDROID:
         raise ValueError(f"unsupported PyRun ABI: {abi}")
     cmake_lists = Path(__file__).resolve().parents[1] / "recipes" / "pygame" / "CMakeLists.txt"
@@ -43,12 +47,39 @@ def build(source_root: Path, build_dir: Path, ndk_root: Path, abi: str) -> Path:
         if not (source / "CMakeLists.txt").is_file():
             raise FileNotFoundError(f"pinned {name} source is missing: {source}")
         command.append(f"-DPYRUN_{name}_SOURCE_DIR={source}")
+    jpeg_source = source_root / "libjpeg-turbo-3.2.0" / "libjpeg-turbo-3.2.0"
+    if not (jpeg_source / "CMakeLists.txt").is_file():
+        raise FileNotFoundError(f"pinned libjpeg-turbo source is missing: {jpeg_source}")
     subprocess.run(command, check=True)
     subprocess.run(["cmake", "--build", str(build_dir), "--config", "Release", "--parallel", "2"], check=True)
     expected = ["libSDL2.so", "libSDL2_image.so", "libSDL2_mixer.so", "libSDL2_ttf.so"]
     for name in expected:
         if not list(build_dir.rglob(name)):
             raise FileNotFoundError(f"native SDL build did not produce {name}")
+    jpeg_build = build_dir / "libjpeg-turbo"
+    jpeg_command = [
+        "cmake", "-S", str(jpeg_source), "-B", str(jpeg_build),
+        f"-DCMAKE_TOOLCHAIN_FILE={toolchain}",
+        f"-DANDROID_ABI={ABI_TO_ANDROID[abi]}",
+        "-DANDROID_PLATFORM=android-25",
+        "-DANDROID_STL=c++_shared",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+        "-DENABLE_SHARED=OFF",
+        "-DENABLE_STATIC=ON",
+        "-DWITH_SIMD=OFF",
+        "-DWITH_TURBOJPEG=OFF",
+        "-DWITH_TESTS=OFF",
+        "-DWITH_TOOLS=OFF",
+    ]
+    if shutil.which("ninja"):
+        jpeg_command.extend(("-G", "Ninja"))
+    subprocess.run(jpeg_command, check=True)
+    subprocess.run(["cmake", "--build", str(jpeg_build), "--config", "Release", "--target", "jpeg-static", "--parallel", "2"], check=True)
+    if not list(jpeg_build.rglob("libjpeg.a")):
+        raise FileNotFoundError("native libjpeg-turbo build did not produce libjpeg.a")
+    if not list(build_dir.rglob("libpng16.a")):
+        raise FileNotFoundError("native libpng build did not produce libpng16.a")
     return build_dir
 
 

@@ -3,18 +3,21 @@
 This recipe builds upstream Pygame 2.6.1 for PyRun's CPython 3.13 ABI on
 `arm64-v8a` and `x86_64`. It uses Pygame's upstream `Setup.Android.SDL2.in`
 template, pinned SDL2/SDL2_image/SDL2_mixer/SDL2_ttf sources, and statically
-linked FreeType. The APK supplies the matching SDL shared libraries and SDL's
-Android Activity; the wheel contains only Pygame's Python and extension modules.
+linked FreeType, libpng, and libjpeg-turbo. The APK supplies the matching SDL
+shared libraries and SDL's Android Activity; the wheel contains Pygame's Python
+and extension modules.
 
-Image decoding uses SDL_image's bundled stb backend. Audio includes WAV,
-MP3/minimp3, and OGG/stb_vorbis. Optional codecs requiring separate native
-packages are disabled. This is an experimental Android package, not a promise
-that arbitrary desktop Pygame projects or plugins work unchanged.
+Image decoding uses SDL_image's bundled stb backend and Pygame's extended
+PNG/JPEG module. Audio includes WAV, MP3/minimp3, and OGG/stb_vorbis. Optional
+codecs requiring separate native packages are disabled. This is an experimental
+Android package, not a promise that arbitrary desktop Pygame projects or plugins
+work unchanged.
 
 Release checks validate the two wheel tags, the full Android Setup extension
 set, Pygame and SDL link dependencies, ELF machine and 16 KB load alignment.
-The source build preserves Pygame's LGPL and SDL_gfx license notices; the APK
-also includes notices for SDL, FreeType, stb_image, stb_vorbis and minimp3.
+The source build preserves Pygame's LGPL, SDL_gfx, libpng and libjpeg-turbo
+license notices; the APK also includes notices for SDL, FreeType, stb_image,
+stb_vorbis and minimp3.
 Android import, drawing, audio, touch, IME, pause/resume, rotation and
 cancellation tests remain a separate device/emulator acceptance step; this
 build workflow intentionally skips emulator tests.

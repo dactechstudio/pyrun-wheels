@@ -45,6 +45,16 @@ SOURCES = {
         "5c3a8e78f7b24c20b25b54ee575d6daa40007a5f4eea2845861c3409b3021747",
         "freetype-2.13.3.tar.gz",
     ),
+    "libpng": (
+        "https://codeload.github.com/pnggroup/libpng/zip/refs/tags/v1.6.59",
+        "6fd97a1e5e2ac55cec0a538a9800a351eb3844086736291844ebd12db72ba433",
+        "libpng-1.6.59.zip",
+    ),
+    "libjpeg_turbo": (
+        "https://codeload.github.com/libjpeg-turbo/libjpeg-turbo/zip/refs/tags/3.2.0",
+        "1b4c2cb6cba1ca5e53b9e85eeeab02154cab4b70894c96e97a9c747a26d19d63",
+        "libjpeg-turbo-3.2.0.zip",
+    ),
 }
 
 
@@ -116,7 +126,7 @@ def _extract_zip(archive: Path, destination: Path, expected_root: str) -> None:
 
 
 def add_android_license_notices(pygame_source: Path) -> None:
-    """Keep Pygame and SDL_gfx notices in the stripped Android wheel."""
+    """Keep Pygame and all statically linked notices in the Android wheel."""
     package_root = pygame_source / "src_py"
     licenses = {
         "LICENSE.txt": pygame_source / "docs" / "LGPL.txt",
@@ -136,9 +146,35 @@ def add_android_license_notices(pygame_source: Path) -> None:
         stripped_files,
         '"src_py/pygame_icon_mac.bmp",\n'
         '                              "src_py/LICENSE.txt",\n'
-        '                              "src_py/LICENSE.sdl_gfx.txt"])]',
+        '                              "src_py/LICENSE.sdl_gfx.txt",\n'
+        '                              "src_py/LICENSE.libpng.txt",\n'
+        '                              "src_py/LICENSE.libjpeg-turbo.txt"])]',
+    )
+    setup_marker = "for e in extensions:\n    # Only define the ARM_NEON defines if they have been enabled at build time."
+    if setup_text.count(setup_marker) != 1:
+        raise ValueError("could not safely add Android ELF alignment flags to Pygame extensions")
+    setup_text = setup_text.replace(
+        setup_marker,
+        "if os.environ.get('PYGAME_ANDROID') == '1':\n"
+        "    for extension in extensions:\n"
+        "        extension.extra_link_args.append('-Wl,-z,max-page-size=16384')\n\n"
+        + setup_marker,
     )
     setup_path.write_text(setup_text, encoding="utf-8", newline="\n")
+
+
+def add_native_license_notices(
+    pygame_source: Path, libpng_source: Path, libjpeg_source: Path
+) -> None:
+    notices = {
+        "LICENSE.libpng.txt": libpng_source / "LICENSE",
+        "LICENSE.libjpeg-turbo.txt": libjpeg_source / "LICENSE.md",
+    }
+    package_root = pygame_source / "src_py"
+    for filename, source in notices.items():
+        if not source.is_file():
+            raise ValueError(f"required native dependency license file is missing: {source}")
+        shutil.copyfile(source, package_root / filename)
 
 
 def prepare(output_dir: Path, cache_dir: Path) -> Path:
@@ -154,6 +190,8 @@ def prepare(output_dir: Path, cache_dir: Path) -> Path:
         "sdl_mixer": "SDL_mixer-release-2.8.2",
         "sdl_ttf": "SDL_ttf-release-2.24.0",
         "freetype": "freetype-2.13.3",
+        "libpng": "libpng-1.6.59",
+        "libjpeg_turbo": "libjpeg-turbo-3.2.0",
     }
     try:
         for name, (url, expected_hash, archive_name) in SOURCES.items():
@@ -180,6 +218,9 @@ def prepare(output_dir: Path, cache_dir: Path) -> Path:
 
         pygame_source = output_dir / roots["pygame"] / roots["pygame"]
         add_android_license_notices(pygame_source)
+        libpng_source = output_dir / roots["libpng"] / roots["libpng"]
+        libjpeg_source = output_dir / roots["libjpeg_turbo"] / roots["libjpeg_turbo"]
+        add_native_license_notices(pygame_source, libpng_source, libjpeg_source)
 
         freetype_source = output_dir / roots["freetype"] / roots["freetype"]
         ttf_external = output_dir / roots["sdl_ttf"] / roots["sdl_ttf"] / "external" / "freetype"
@@ -194,6 +235,10 @@ def prepare(output_dir: Path, cache_dir: Path) -> Path:
             output_dir / roots["sdl_mixer"] / roots["sdl_mixer"] / "CMakeLists.txt",
             output_dir / roots["sdl_ttf"] / roots["sdl_ttf"] / "CMakeLists.txt",
             ttf_external / "CMakeLists.txt",
+            libpng_source / "CMakeLists.txt",
+            libpng_source / "LICENSE",
+            libjpeg_source / "CMakeLists.txt",
+            libjpeg_source / "LICENSE.md",
         }
         missing = sorted(path.as_posix() for path in required if not path.is_file())
         if missing:

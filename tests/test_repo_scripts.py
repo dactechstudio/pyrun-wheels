@@ -26,7 +26,8 @@ from scripts.sign_manifest import main as sign_manifest_main, validate_manifest
 from scripts.generate_signing_key import generate_keypair
 from scripts.promote_snapshot import promote
 from scripts.prepare_pages_site import prepare_pages_site
-from scripts.prepare_pygame_source import add_android_license_notices
+from scripts.prepare_pygame_source import add_android_license_notices, add_native_license_notices
+from scripts.configure_pygame_android import configure as configure_pygame_android
 from scripts.yank_version import update_policy
 from scripts.compare_wheels import compare
 from scripts.stage_simple_index import stage
@@ -224,7 +225,7 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         sbom = json.loads((root / recipe["sbom"]).read_text(encoding="utf-8"))
         components = {component["name"] for component in sbom["components"]}
         self.assertTrue({"SDL2", "SDL2_image", "SDL2_mixer", "SDL2_ttf", "FreeType"} <= components)
-        self.assertTrue({"SDL_gfxPrimitives", "stb_image", "stb_vorbis", "minimp3"} <= components)
+        self.assertTrue({"libpng", "libjpeg-turbo", "SDL_gfxPrimitives", "stb_image", "stb_vorbis", "minimp3"} <= components)
         self.assertEqual(
             extension_modules([
                 "pygame/base.cpython-313-aarch64-linux-android.so",
@@ -248,7 +249,9 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             )
             setup = source / "setup.py"
             setup.write_text(
-                'data_files = [(\'pygame\', ["src_py/pygame_icon_mac.bmp"])]\n',
+                'data_files = [(\'pygame\', ["src_py/pygame_icon_mac.bmp"])]\n'
+                "for e in extensions:\n"
+                "    # Only define the ARM_NEON defines if they have been enabled at build time.\n",
                 encoding="utf-8",
             )
 
@@ -264,6 +267,80 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             )
             self.assertIn('"src_py/LICENSE.txt"', setup.read_text(encoding="utf-8"))
             self.assertIn('"src_py/LICENSE.sdl_gfx.txt"', setup.read_text(encoding="utf-8"))
+            self.assertIn('"src_py/LICENSE.libpng.txt"', setup.read_text(encoding="utf-8"))
+            self.assertIn('"src_py/LICENSE.libjpeg-turbo.txt"', setup.read_text(encoding="utf-8"))
+            self.assertIn("extension.extra_link_args.append('-Wl,-z,max-page-size=16384')", setup.read_text(encoding="utf-8"))
+
+    def test_pygame_android_preserves_statically_linked_image_library_notices(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            pygame = root / "pygame"
+            libpng = root / "libpng"
+            libjpeg = root / "libjpeg"
+            (pygame / "src_py").mkdir(parents=True)
+            libpng.mkdir()
+            libjpeg.mkdir()
+            (libpng / "LICENSE").write_text("libpng license", encoding="utf-8")
+            (libjpeg / "LICENSE.md").write_text("libjpeg-turbo license", encoding="utf-8")
+
+            add_native_license_notices(pygame, libpng, libjpeg)
+
+            self.assertEqual(
+                (pygame / "src_py" / "LICENSE.libpng.txt").read_text(encoding="utf-8"),
+                "libpng license",
+            )
+            self.assertEqual(
+                (pygame / "src_py" / "LICENSE.libjpeg-turbo.txt").read_text(encoding="utf-8"),
+                "libjpeg-turbo license",
+            )
+
+    def test_pygame_android_setup_links_pinned_image_dependencies(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            pygame = root / "pygame" / "pygame-2.6.1"
+            template = pygame / "buildconfig" / "Setup.Android.SDL2.in"
+            template.parent.mkdir(parents=True)
+            template.write_text(
+                "SDL = {sdl_includes} -lSDL2\n"
+                "JPEG = {jpeg_includes} -ljpeg\n"
+                "PNG = {png_includes} -lpng16\n"
+                "DEBUG =\n"
+                "imageext src_c/imageext.c $(SDL) $(IMAGE) $(PNG) $(JPEG) $(DEBUG)\n"
+                "base src_c/base.c $(SDL) $(DEBUG)\n"
+                "display src_c/display.c $(SDL) $(DEBUG)\n"
+                "event src_c/event.c $(SDL) $(DEBUG)\n"
+                "font src_c/font.c $(SDL) $(DEBUG)\n"
+                "mixer src_c/mixer.c $(SDL) $(DEBUG)\n"
+                "mixer_music src_c/music.c $(SDL) $(DEBUG)\n"
+                "_sdl2.video src_c/_sdl2/video.c $(SDL) $(DEBUG)\n",
+                encoding="utf-8",
+            )
+            roots = {
+                "SDL-release-2.32.10/SDL-release-2.32.10": "sdl",
+                "SDL_image-release-2.8.12/SDL_image-release-2.8.12": "image",
+                "SDL_mixer-release-2.8.2/SDL_mixer-release-2.8.2": "mixer",
+                "SDL_ttf-release-2.24.0/SDL_ttf-release-2.24.0": "ttf",
+                "libpng-1.6.59/libpng-1.6.59": "png",
+                "libjpeg-turbo-3.2.0/libjpeg-turbo-3.2.0": "jpeg",
+            }
+            for relative, _name in roots.items():
+                source = root / relative
+                source.mkdir(parents=True)
+                (source / "CMakeLists.txt").write_text("", encoding="utf-8")
+            native = root / "native"
+            for library in (
+                "libSDL2.so", "libSDL2_image.so", "libSDL2_mixer.so", "libSDL2_ttf.so",
+                "libpng16.a", "libjpeg.a",
+            ):
+                target = native / library
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(b"")
+
+            result = configure_pygame_android(pygame, root, native).read_text(encoding="utf-8")
+
+            self.assertIn("-lpng16 -lz -lm", result)
+            self.assertIn("-ljpeg -lm", result)
+            self.assertNotIn("-Wl,-z,max-page-size=16384", result)
 
     def test_opencv_recipe_pins_upstream_inputs_and_patch_digest(self) -> None:
         root = Path(__file__).resolve().parents[1]

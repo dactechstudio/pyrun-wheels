@@ -13,6 +13,8 @@ def configure(pygame_source: Path, source_root: Path, native_build: Path) -> Pat
         "image": source_root / "SDL_image-release-2.8.12" / "SDL_image-release-2.8.12",
         "mixer": source_root / "SDL_mixer-release-2.8.2" / "SDL_mixer-release-2.8.2",
         "ttf": source_root / "SDL_ttf-release-2.24.0" / "SDL_ttf-release-2.24.0",
+        "png": source_root / "libpng-1.6.59" / "libpng-1.6.59",
+        "jpeg": source_root / "libjpeg-turbo-3.2.0" / "libjpeg-turbo-3.2.0",
     }
     for name, path in source_paths.items():
         if not (path / "CMakeLists.txt").is_file():
@@ -32,14 +34,13 @@ def configure(pygame_source: Path, source_root: Path, native_build: Path) -> Pat
         "sdl_image_includes": f"-I{source_paths['image'] / 'include'} -L{cmake_output('image', 'libSDL2_image.so')}",
         "sdl_mixer_includes": f"-I{source_paths['mixer'] / 'include'} -L{cmake_output('mixer', 'libSDL2_mixer.so')}",
         "sdl_ttf_includes": f"-I{source_paths['ttf']} -I{source_paths['ttf'] / 'external' / 'freetype' / 'include'} -L{cmake_output('ttf', 'libSDL2_ttf.so')}",
-        "jpeg_includes": "",
-        "png_includes": "",
+        "jpeg_includes": f"-I{source_paths['jpeg'] / 'src'} -I{cmake_output('jpeg', 'libjpeg.a')} -L{cmake_output('jpeg', 'libjpeg.a')}",
+        "png_includes": f"-I{source_paths['png']} -I{cmake_output('png', 'libpng16.a')} -L{cmake_output('png', 'libpng16.a')}",
         "freetype_includes": "",
     }
     text = template_path.read_text(encoding="utf-8")
-    text = text.replace("JPEG = {jpeg_includes} -ljpeg", "JPEG =")
-    text = text.replace("PNG = {png_includes} -lpng16", "PNG =")
-    text = text.replace("DEBUG =", "DEBUG = -Wl,-z,max-page-size=16384")
+    text = text.replace("JPEG = {jpeg_includes} -ljpeg", "JPEG = {jpeg_includes} -ljpeg -lm")
+    text = text.replace("PNG = {png_includes} -lpng16", "PNG = {png_includes} -lpng16 -lz -lm")
     setup = text.format(**values)
     expected_modules = {"base", "display", "event", "font", "imageext", "mixer", "mixer_music", "_sdl2.video"}
     found_modules = {line.split()[0] for line in setup.splitlines() if line.strip() and not line.lstrip().startswith("#") and "src_c" in line}
