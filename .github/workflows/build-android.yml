@@ -16,6 +16,11 @@ on:
         required: true
         type: boolean
         default: true
+      build_pygame:
+        description: Build experimental Pygame and SDL2 Android wheels for both ABIs
+        required: true
+        type: boolean
+        default: true
       restage_from_build_run_id:
         description: Re-stage previously verified wheel artifacts after recipe or SBOM review, without rebuilding
         required: false
@@ -168,6 +173,54 @@ jobs:
           python scripts/verify_android_wheels.py opencv-wheelhouse/*.whl \
             --expected-abi "${{ matrix.abi }}" --android-api 25 --readelf "$PYRUN_NDK_LLVM_READELF"
 
+      - name: Prepare pinned Pygame and SDL sources
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_pygame == true }}
+        shell: bash
+        run: |
+          python scripts/prepare_pygame_source.py \
+            --output-dir "$RUNNER_TEMP/pygame-source" \
+            --cache-dir "$RUNNER_TEMP/pygame-source-cache"
+
+      - name: Build the pinned SDL2 runtime for this ABI
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_pygame == true }}
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check "cmake==3.31.6" "ninja==1.13.0"
+          python scripts/build_pygame_sdl.py \
+            --source-root "$RUNNER_TEMP/pygame-source" \
+            --build-dir "$RUNNER_TEMP/pygame-sdl-build" \
+            --ndk-root "$ANDROID_NDK_HOME" \
+            --abi "${{ matrix.abi }}"
+
+      - name: Generate Pygame's Android Setup from upstream SDL configuration
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_pygame == true }}
+        shell: bash
+        run: |
+          python scripts/configure_pygame_android.py \
+            --pygame-source "$RUNNER_TEMP/pygame-source/pygame-2.6.1/pygame-2.6.1" \
+            --source-root "$RUNNER_TEMP/pygame-source" \
+            --native-build "$RUNNER_TEMP/pygame-sdl-build"
+
+      - name: Build Pygame wheel without device/emulator execution
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_pygame == true }}
+        shell: bash
+        env:
+          CIBW_TEST_SKIP: "*"
+          CIBW_ENVIRONMENT_ANDROID: PYGAME_ANDROID=1
+          CIBW_BEFORE_BUILD: python -m pip install --disable-pip-version-check setuptools==80.9.0 wheel==0.45.1 Cython==3.1.3
+        run: |
+          python -m cibuildwheel --platform android \
+            --archs "${{ matrix.cibw_arch }}" \
+            --output-dir pygame-wheelhouse \
+            "$RUNNER_TEMP/pygame-source/pygame-2.6.1/pygame-2.6.1"
+
+      - name: Verify Pygame wheel contents, Android tags, ABI, and 16 KB ELF alignment
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_pygame == true }}
+        shell: bash
+        run: |
+          python scripts/verify_pygame_wheel.py pygame-wheelhouse/*.whl \
+            --expected-abi "${{ matrix.abi }}" --android-api 25 --readelf "$PYRUN_NDK_LLVM_READELF"
+
       - name: Upload verified wheel
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
@@ -182,6 +235,15 @@ jobs:
         with:
           name: wheels-opencv-${{ matrix.abi }}
           path: opencv-wheelhouse/*.whl
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload experimental Pygame wheel for reviewed snapshot staging
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_pygame == true }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: wheels-pygame-${{ matrix.abi }}
+          path: pygame-wheelhouse/*.whl
           if-no-files-found: error
           retention-days: 14
 
@@ -309,10 +371,29 @@ jobs:
           gh run download "$SOURCE_BUILD_RUN_ID" --repo "$GITHUB_REPOSITORY" \
             --pattern 'wheels-*' --dir downloaded-wheels
           find downloaded-wheels -type f -name '*.whl' -exec cp -n {} wheelhouse/ \;
-          test "$(find wheelhouse -maxdepth 1 -type f -name '*.whl' | wc -l)" -eq 4
+          count="$(find wheelhouse -maxdepth 1 -type f -name '*.whl' | wc -l)"
+          [[ "$count" -eq 2 || "$count" -eq 4 || "$count" -eq 6 ]] || {
+            echo "Expected probe, Pygame, and optional OpenCV wheels for both ABIs; found $count" >&2
+            exit 1
+          }
           for abi in arm64_v8a x86_64; do
             test -f "wheelhouse/pyrun_native_probe-0.1.0-cp313-cp313-android_25_"$abi".whl"
-            test -f "wheelhouse/opencv_python_headless-4.11.0.86-cp313-cp313-android_25_"$abi".whl"
+          done
+          for package in pygame opencv; do
+            case "$package" in
+              pygame) pattern='pygame-2.6.1-cp313-cp313-android_25_*.whl' ;;
+              opencv) pattern='opencv_python_headless-4.11.0.86-cp313-cp313-android_25_*.whl' ;;
+            esac
+            package_count="$(find wheelhouse -maxdepth 1 -type f -name "$pattern" | wc -l)"
+            [[ "$package_count" -eq 0 || "$package_count" -eq 2 ]] || {
+              echo "Expected zero or both ABI wheels for $package; found $package_count" >&2
+              exit 1
+            }
+            if [[ "$package_count" -eq 2 ]]; then
+              for abi in arm64_v8a x86_64; do
+                test -f "wheelhouse/${pattern//\*/$abi}"
+              done
+            fi
           done
 
       - name: Install pinned Android NDK

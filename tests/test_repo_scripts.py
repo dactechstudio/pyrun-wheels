@@ -26,10 +26,12 @@ from scripts.sign_manifest import main as sign_manifest_main, validate_manifest
 from scripts.generate_signing_key import generate_keypair
 from scripts.promote_snapshot import promote
 from scripts.prepare_pages_site import prepare_pages_site
+from scripts.prepare_pygame_source import add_android_license_notices
 from scripts.yank_version import update_policy
 from scripts.compare_wheels import compare
 from scripts.stage_simple_index import stage
 from scripts.verify_android_wheels import safe_members, verify_wheel
+from scripts.verify_pygame_wheel import extension_modules
 
 
 def make_wheel(
@@ -116,6 +118,10 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             "true",
         )
         self.assertEqual(
+            workflow["on"]["workflow_dispatch"]["inputs"]["build_pygame"]["default"],
+            "true",
+        )
+        self.assertEqual(
             workflow["on"]["workflow_dispatch"]["inputs"]["restage_from_build_run_id"]["default"],
             "",
         )
@@ -183,6 +189,81 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         self.assertEqual(len(opencv_steps), 3)
         self.assertTrue(all("inputs.build_opencv == true" in step["if"] for step in opencv_steps))
         self.assertIn("CIBW_TEST_SKIP='*'", opencv_steps[1]["run"])
+
+        pygame_steps = [
+            step for step in workflow["jobs"]["build"]["steps"]
+            if step["name"] in {
+                "Prepare pinned Pygame and SDL sources",
+                "Build the pinned SDL2 runtime for this ABI",
+                "Generate Pygame's Android Setup from upstream SDL configuration",
+                "Build Pygame wheel without device/emulator execution",
+                "Verify Pygame wheel contents, Android tags, ABI, and 16 KB ELF alignment",
+            }
+        ]
+        self.assertEqual(len(pygame_steps), 5)
+        self.assertTrue(all("inputs.build_pygame == true" in step["if"] for step in pygame_steps))
+        self.assertEqual(pygame_steps[3]["env"]["CIBW_TEST_SKIP"], "*")
+        self.assertEqual(pygame_steps[3]["env"]["CIBW_ENVIRONMENT_ANDROID"], "PYGAME_ANDROID=1")
+
+    def test_pygame_recipe_pins_android_source_stack_and_build_inputs(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        recipe = json.loads((root / "recipes" / "pygame" / "recipe.json").read_text(encoding="utf-8"))
+        schema = json.loads((root / "schemas" / "build-recipe.schema.json").read_text(encoding="utf-8"))
+        validate(instance=recipe, schema=schema)
+        self.assertEqual(recipe["name"], "pygame")
+        self.assertEqual(recipe["version"], "2.6.1")
+        self.assertEqual(recipe["release_status"], "experimental")
+        self.assertEqual(set(recipe["abis"]), {"arm64_v8a", "x86_64"})
+        self.assertEqual(recipe["build"]["cython"], "3.1.3")
+        self.assertEqual(recipe["build"]["ninja"], "1.13.0")
+        for patch in recipe["patches"]:
+            self.assertEqual(
+                hashlib.sha256((root / patch["path"]).read_bytes()).hexdigest(),
+                patch["sha256"],
+            )
+        sbom = json.loads((root / recipe["sbom"]).read_text(encoding="utf-8"))
+        components = {component["name"] for component in sbom["components"]}
+        self.assertTrue({"SDL2", "SDL2_image", "SDL2_mixer", "SDL2_ttf", "FreeType"} <= components)
+        self.assertTrue({"SDL_gfxPrimitives", "stb_image", "stb_vorbis", "minimp3"} <= components)
+        self.assertEqual(
+            extension_modules([
+                "pygame/base.cpython-313-aarch64-linux-android.so",
+                "pygame/_sdl2/video.cpython-313-aarch64-linux-android.so",
+                "pygame/display.py",
+            ]),
+            {
+                "pygame/base": "pygame/base.cpython-313-aarch64-linux-android.so",
+                "pygame/_sdl2/video": "pygame/_sdl2/video.cpython-313-aarch64-linux-android.so",
+            },
+        )
+
+    def test_pygame_android_source_preserves_runtime_license_notices(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary)
+            (source / "docs" / "licenses").mkdir(parents=True)
+            (source / "src_py").mkdir()
+            (source / "docs" / "LGPL.txt").write_text("pygame LGPL notice", encoding="utf-8")
+            (source / "docs" / "licenses" / "LICENSE.sdl_gfx.txt").write_text(
+                "SDL_gfx zlib notice", encoding="utf-8"
+            )
+            setup = source / "setup.py"
+            setup.write_text(
+                'data_files = [(\'pygame\', ["src_py/pygame_icon_mac.bmp"])]\n',
+                encoding="utf-8",
+            )
+
+            add_android_license_notices(source)
+
+            self.assertEqual(
+                (source / "src_py" / "LICENSE.txt").read_text(encoding="utf-8"),
+                "pygame LGPL notice",
+            )
+            self.assertEqual(
+                (source / "src_py" / "LICENSE.sdl_gfx.txt").read_text(encoding="utf-8"),
+                "SDL_gfx zlib notice",
+            )
+            self.assertIn('"src_py/LICENSE.txt"', setup.read_text(encoding="utf-8"))
+            self.assertIn('"src_py/LICENSE.sdl_gfx.txt"', setup.read_text(encoding="utf-8"))
 
     def test_opencv_recipe_pins_upstream_inputs_and_patch_digest(self) -> None:
         root = Path(__file__).resolve().parents[1]

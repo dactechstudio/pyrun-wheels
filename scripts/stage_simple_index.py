@@ -113,7 +113,9 @@ def _stage_into(
     toolchain = tomllib.loads((ROOT / "toolchain.lock").read_text(encoding="utf-8"))
     for key in groups:
         recipe = recipes[key]["data"]
-        for field in ("ndk", "setuptools", "wheel", "cibuildwheel"):
+        for field in ("ndk", "setuptools", "wheel", "cibuildwheel", "cmake", "cython", "ninja"):
+            if field not in recipe["build"]:
+                continue
             if recipe["build"][field] != str(toolchain[field]):
                 raise ValueError(f"recipe {key} {field} version differs from toolchain.lock")
         if int(recipe["android_api_min"]) != int(toolchain["android_api"]):
