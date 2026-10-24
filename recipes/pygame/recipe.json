@@ -24,7 +24,7 @@
     },
     {
       "path": "scripts/prepare_pygame_source.py",
-      "sha256": "2216787be95f93db998d026f60e1531762aeda2c971f417d517d38f4e1a4cbeb"
+      "sha256": "76bd82c1cf1af467de15f7b403dc2feeaf4c3dd62acc6bebbc49504741fca835"
     },
     {
       "path": "scripts/build_pygame_sdl.py",
@@ -32,7 +32,7 @@
     },
     {
       "path": "scripts/configure_pygame_android.py",
-      "sha256": "b25bde277a94b6cded0e4afffd2807a4ba6e97bf81de8d5435afa2d4d17f9318"
+      "sha256": "458424fee07c5b3e155f207af08f19afcc2e400eeffb7ff6229d654e001b41f6"
     },
     {
       "path": "scripts/verify_pygame_wheel.py",

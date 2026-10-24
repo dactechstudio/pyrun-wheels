@@ -253,6 +253,7 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             setup = source / "setup.py"
             setup.write_text(
                 'data_files = [(\'pygame\', ["src_py/pygame_icon_mac.bmp"])]\n'
+                "        distutils.ccompiler.spawn(cmd, dry_run=self.dry_run, **kwargs)\n"
                 "for e in extensions:\n"
                 "    # Only define the ARM_NEON defines if they have been enabled at build time.\n",
                 encoding="utf-8",
@@ -272,6 +273,7 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             self.assertIn('"src_py/LICENSE.sdl_gfx.txt"', setup.read_text(encoding="utf-8"))
             self.assertIn('"src_py/LICENSE.libpng.txt"', setup.read_text(encoding="utf-8"))
             self.assertIn('"src_py/LICENSE.libjpeg-turbo.txt"', setup.read_text(encoding="utf-8"))
+            self.assertIn("self.__spawn(cmd, dry_run=self.dry_run, **kwargs)", setup.read_text(encoding="utf-8"))
             self.assertIn("extension.extra_link_args.append('-Wl,-z,max-page-size=16384')", setup.read_text(encoding="utf-8"))
 
     def test_pygame_android_preserves_statically_linked_image_library_notices(self) -> None:
@@ -347,6 +349,7 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             self.assertIn("src_c/simd_blitters_sse2.c", result)
             self.assertIn("src_c/simd_blitters_avx2.c", result)
             self.assertNotIn("-Wl,-z,max-page-size=16384", result)
+            self.assertFalse((pygame / "src_c" / "pyrun_avx2_fallbacks.c").exists())
 
     def test_pygame_android_arm64_setup_uses_neon_compatible_simd_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -390,7 +393,10 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             result = configure_pygame_android(pygame, root, native, "arm64_v8a").read_text(encoding="utf-8")
 
             self.assertIn("src_c/simd_blitters_sse2.c", result)
+            self.assertIn("src_c/pyrun_avx2_fallbacks.c", result)
             self.assertNotIn("src_c/simd_blitters_avx2.c", result)
+            fallback = (pygame / "src_c" / "pyrun_avx2_fallbacks.c").read_text(encoding="utf-8")
+            self.assertIn("int pg_has_avx2(void) { return 0; }", fallback)
 
     def test_opencv_recipe_pins_upstream_inputs_and_patch_digest(self) -> None:
         root = Path(__file__).resolve().parents[1]

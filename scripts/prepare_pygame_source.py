@@ -150,6 +150,13 @@ def add_android_license_notices(pygame_source: Path) -> None:
         '                              "src_py/LICENSE.libpng.txt",\n'
         '                              "src_py/LICENSE.libjpeg-turbo.txt"])]',
     )
+    avx_spawn = "        distutils.ccompiler.spawn(cmd, dry_run=self.dry_run, **kwargs)"
+    if setup_text.count(avx_spawn) != 1:
+        raise ValueError("could not safely adapt Pygame's AVX2 compiler hook to Python 3.13")
+    setup_text = setup_text.replace(
+        avx_spawn,
+        "        self.__spawn(cmd, dry_run=self.dry_run, **kwargs)",
+    )
     setup_marker = "for e in extensions:\n    # Only define the ARM_NEON defines if they have been enabled at build time."
     if setup_text.count(setup_marker) != 1:
         raise ValueError("could not safely add Android ELF alignment flags to Pygame extensions")

@@ -50,6 +50,29 @@ def configure(pygame_source: Path, source_root: Path, native_build: Path, abi: s
     simd_sources = "src_c/simd_blitters_sse2.c"
     if abi == "x86_64":
         simd_sources += " src_c/simd_blitters_avx2.c"
+    else:
+        fallback_source = pygame_source / "src_c" / "pyrun_avx2_fallbacks.c"
+        fallback_source.parent.mkdir(parents=True, exist_ok=True)
+        fallback_source.write_text(
+            '#include "simd_blitters.h"\n'
+            '/* ARM64 never dispatches AVX2; define link-safe symbols for Pygame 2.6.1. */\n'
+            'int pg_has_avx2(void) { return 0; }\n'
+            'int pg_avx2_at_runtime_but_uncompiled(void) { return 0; }\n'
+            '#define PYRUN_AVX2_FALLBACK(name) void name(SDL_BlitInfo *info) { (void)info; }\n'
+            'PYRUN_AVX2_FALLBACK(blit_blend_rgba_mul_avx2)\n'
+            'PYRUN_AVX2_FALLBACK(blit_blend_rgb_mul_avx2)\n'
+            'PYRUN_AVX2_FALLBACK(blit_blend_rgba_add_avx2)\n'
+            'PYRUN_AVX2_FALLBACK(blit_blend_rgb_add_avx2)\n'
+            'PYRUN_AVX2_FALLBACK(blit_blend_rgba_sub_avx2)\n'
+            'PYRUN_AVX2_FALLBACK(blit_blend_rgb_sub_avx2)\n'
+            'PYRUN_AVX2_FALLBACK(blit_blend_rgba_max_avx2)\n'
+            'PYRUN_AVX2_FALLBACK(blit_blend_rgb_max_avx2)\n'
+            'PYRUN_AVX2_FALLBACK(blit_blend_rgba_min_avx2)\n'
+            'PYRUN_AVX2_FALLBACK(blit_blend_rgb_min_avx2)\n',
+            encoding="utf-8",
+            newline="\n",
+        )
+        simd_sources += " src_c/pyrun_avx2_fallbacks.c"
     setup = setup.replace(
         surface_line,
         f"surface src_c/surface.c src_c/alphablit.c src_c/surface_fill.c {simd_sources} $(SDL) $(DEBUG)",
