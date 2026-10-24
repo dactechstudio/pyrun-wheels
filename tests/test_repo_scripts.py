@@ -219,7 +219,7 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         validate(instance=recipe, schema=schema)
         self.assertEqual(recipe["name"], "pygame")
         self.assertEqual(recipe["version"], "2.6.1")
-        self.assertEqual(recipe["release_status"], "experimental")
+        self.assertEqual(recipe["release_status"], "approved")
         self.assertEqual(set(recipe["abis"]), {"arm64_v8a", "x86_64"})
         self.assertEqual(recipe["build"]["cython"], "3.1.3")
         self.assertEqual(recipe["build"]["ninja"], "1.13.0")
@@ -448,6 +448,13 @@ class AndroidWheelVerificationTests(unittest.TestCase):
                     version="4.11.0.86",
                     module_path="cv2/cv2.abi3.so",
                 )
+                make_wheel(
+                    wheel_dir,
+                    abi,
+                    distribution="pygame",
+                    version="2.6.1",
+                    module_path="pygame/base.cpython-313.so",
+                )
 
             output = root / "snapshot"
             manifest = stage(wheel_dir, output, "b" * 40)
@@ -464,6 +471,13 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             self.assertTrue(index.is_file())
             self.assertEqual(index.read_text(encoding="utf-8").count("<a href="), 2)
             self.assertTrue((output / "scripts" / "prepare_opencv_source.py").is_file())
+            pygame_artifacts = [item for item in manifest["artifacts"] if item["name"] == "pygame"]
+            self.assertEqual({item["abi"] for item in pygame_artifacts}, {"arm64_v8a", "x86_64"})
+            self.assertTrue((output / "recipes" / "pygame" / "CMakeLists.txt").is_file())
+            self.assertIn(
+                "recipes/pygame/CMakeLists.txt",
+                {patch["path"] for patch in pygame_artifacts[0]["patches"]},
+            )
             validate_manifest(output / "manifest.json")
 
     def test_signing_workflow_is_separate_manual_protected_and_read_only(self) -> None:

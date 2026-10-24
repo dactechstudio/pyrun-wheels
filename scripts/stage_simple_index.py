@@ -160,8 +160,10 @@ def _stage_into(
                 part in ("", ".", "..") for part in relative.parts
             ):
                 raise ValueError(f"unsafe patch path: {patch['path']}")
-            if relative.parts[0] == "scripts":
+            if relative.parts[0] in {"scripts", "recipes"}:
                 patch_path = (ROOT / Path(*relative.parts)).resolve(strict=True)
+                if not patch_path.is_relative_to(ROOT):
+                    raise ValueError(f"patch path escapes repository: {patch['path']}")
                 patch_manifest_path = relative.as_posix()
             else:
                 patch_path = (recipe_root / Path(*relative.parts)).resolve(strict=True)

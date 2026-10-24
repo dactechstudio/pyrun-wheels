@@ -5,7 +5,7 @@
   "android_api_min": 25,
   "abis": ["arm64_v8a", "x86_64"],
   "license": "LGPL-2.1-or-later",
-  "release_status": "experimental",
+  "release_status": "approved",
   "source_url": "https://github.com/pygame/pygame",
   "source_revision": "b92c0da9d1b5eba6c813138790fc1ab6cea0252c",
   "build": {
