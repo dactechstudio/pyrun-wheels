@@ -1,0 +1,154 @@
+{
+  "androidMinApi": 25,
+  "artifacts": [
+    {
+      "abi": "arm64_v8a",
+      "androidApi": 25,
+      "filename": "pygame-2.6.1-cp313-cp313-android_25_arm64_v8a.whl",
+      "license": "LGPL-2.1-or-later",
+      "name": "pygame",
+      "patches": [
+        {
+          "path": "recipes/pygame/CMakeLists.txt",
+          "sha256": "833b36e1508bd24e6d2e7450de9c292219ca09a9e1bb67e84fc1d0ba4128bcd4"
+        },
+        {
+          "path": "scripts/prepare_pygame_source.py",
+          "sha256": "10355dadbd503d396f1c8912376eca99775b8c9fd5c7541fa5caa1f6e3c3f6df"
+        },
+        {
+          "path": "scripts/build_pygame_sdl.py",
+          "sha256": "8c42f85e6c02d91db51865469640aef7f6558b4e73fa8a46103f1f85f93fff73"
+        },
+        {
+          "path": "scripts/configure_pygame_android.py",
+          "sha256": "458424fee07c5b3e155f207af08f19afcc2e400eeffb7ff6229d654e001b41f6"
+        },
+        {
+          "path": "scripts/verify_pygame_wheel.py",
+          "sha256": "5272e169e3135c90aee36704f6b42ecad67da2560f4ea2dd6a96ff822fee2ce3"
+        }
+      ],
+      "playRuntimeInstallAllowed": false,
+      "pythonTag": "cp313-cp313",
+      "recipePath": "recipes/pygame/recipe.json",
+      "recipeSha256": "ce307e7f2240f28b6b8ececa63c32d540f17a372b41f0bc8d5f17885e3950fb1",
+      "sbomPath": "sbom/pygame.cdx.json",
+      "sbomSha256": "97cbe4b4bc5aa4807d252df3f15bc64fb1b80ce0a50da3a8293ee522d8f06f72",
+      "sha256": "c5afa6d588c43c53949aed9610cd3cdd615af15ac5072a47a0ea9639f84beb45",
+      "sourceTreeSha256": "14a108bc40df352d6748c290b6ce44375c8d643ee5bd9d15a11317dd0a770bf6",
+      "sourceUrl": "https://github.com/pygame/pygame/tree/b92c0da9d1b5eba6c813138790fc1ab6cea0252c",
+      "upstreamRevision": "b92c0da9d1b5eba6c813138790fc1ab6cea0252c",
+      "upstreamSubmodules": {},
+      "url": "packages/pygame-2.6.1-cp313-cp313-android_25_arm64_v8a.whl",
+      "version": "2.6.1",
+      "yanked": false
+    },
+    {
+      "abi": "x86_64",
+      "androidApi": 25,
+      "filename": "pygame-2.6.1-cp313-cp313-android_25_x86_64.whl",
+      "license": "LGPL-2.1-or-later",
+      "name": "pygame",
+      "patches": [
+        {
+          "path": "recipes/pygame/CMakeLists.txt",
+          "sha256": "833b36e1508bd24e6d2e7450de9c292219ca09a9e1bb67e84fc1d0ba4128bcd4"
+        },
+        {
+          "path": "scripts/prepare_pygame_source.py",
+          "sha256": "10355dadbd503d396f1c8912376eca99775b8c9fd5c7541fa5caa1f6e3c3f6df"
+        },
+        {
+          "path": "scripts/build_pygame_sdl.py",
+          "sha256": "8c42f85e6c02d91db51865469640aef7f6558b4e73fa8a46103f1f85f93fff73"
+        },
+        {
+          "path": "scripts/configure_pygame_android.py",
+          "sha256": "458424fee07c5b3e155f207af08f19afcc2e400eeffb7ff6229d654e001b41f6"
+        },
+        {
+          "path": "scripts/verify_pygame_wheel.py",
+          "sha256": "5272e169e3135c90aee36704f6b42ecad67da2560f4ea2dd6a96ff822fee2ce3"
+        }
+      ],
+      "playRuntimeInstallAllowed": false,
+      "pythonTag": "cp313-cp313",
+      "recipePath": "recipes/pygame/recipe.json",
+      "recipeSha256": "ce307e7f2240f28b6b8ececa63c32d540f17a372b41f0bc8d5f17885e3950fb1",
+      "sbomPath": "sbom/pygame.cdx.json",
+      "sbomSha256": "97cbe4b4bc5aa4807d252df3f15bc64fb1b80ce0a50da3a8293ee522d8f06f72",
+      "sha256": "58e2a4d9fba4548f232599dc2004791e79b4ff7192dd1a3b58cae80c398cee21",
+      "sourceTreeSha256": "14a108bc40df352d6748c290b6ce44375c8d643ee5bd9d15a11317dd0a770bf6",
+      "sourceUrl": "https://github.com/pygame/pygame/tree/b92c0da9d1b5eba6c813138790fc1ab6cea0252c",
+      "upstreamRevision": "b92c0da9d1b5eba6c813138790fc1ab6cea0252c",
+      "upstreamSubmodules": {},
+      "url": "packages/pygame-2.6.1-cp313-cp313-android_25_x86_64.whl",
+      "version": "2.6.1",
+      "yanked": false
+    },
+    {
+      "abi": "arm64_v8a",
+      "androidApi": 25,
+      "filename": "pyrun_native_probe-0.1.0-cp313-cp313-android_25_arm64_v8a.whl",
+      "license": "MIT",
+      "name": "pyrun-native-probe",
+      "patches": [],
+      "playRuntimeInstallAllowed": false,
+      "pythonTag": "cp313-cp313",
+      "recipePath": "recipes/native_probe/recipe.json",
+      "recipeSha256": "ed39bc83decc410a5cbf97b398591afbbabad5712b02c59875663e40f1fd12f7",
+      "sbomPath": "sbom/pyrun-native-probe.cdx.json",
+      "sbomSha256": "3f6dd9c4023bc5be75f8d245c987bac7607ed73fac4bde4a8b9052a2603445f5",
+      "sha256": "a27d0a8cd33c75e62f10bc92c2153cdab7f6227f7f55996cc53bd609ebf29107",
+      "sourceTreeSha256": "94ff17a033f1fe822a44783f15ac6cd3e4448043c43ca8a1427e8c7efde1c812",
+      "sourceUrl": "https://github.com/dactechstudio/pyrun-wheels/tree/6ea681e39e21083b1a552fec730f47196baf6b32/recipes/native_probe",
+      "url": "packages/pyrun_native_probe-0.1.0-cp313-cp313-android_25_arm64_v8a.whl",
+      "version": "0.1.0",
+      "yanked": false
+    },
+    {
+      "abi": "x86_64",
+      "androidApi": 25,
+      "filename": "pyrun_native_probe-0.1.0-cp313-cp313-android_25_x86_64.whl",
+      "license": "MIT",
+      "name": "pyrun-native-probe",
+      "patches": [],
+      "playRuntimeInstallAllowed": false,
+      "pythonTag": "cp313-cp313",
+      "recipePath": "recipes/native_probe/recipe.json",
+      "recipeSha256": "ed39bc83decc410a5cbf97b398591afbbabad5712b02c59875663e40f1fd12f7",
+      "sbomPath": "sbom/pyrun-native-probe.cdx.json",
+      "sbomSha256": "3f6dd9c4023bc5be75f8d245c987bac7607ed73fac4bde4a8b9052a2603445f5",
+      "sha256": "5f78d853f7dd774cf694466e6de223e46017d5de3c08a8de2be11f415bd74458",
+      "sourceTreeSha256": "94ff17a033f1fe822a44783f15ac6cd3e4448043c43ca8a1427e8c7efde1c812",
+      "sourceUrl": "https://github.com/dactechstudio/pyrun-wheels/tree/6ea681e39e21083b1a552fec730f47196baf6b32/recipes/native_probe",
+      "url": "packages/pyrun_native_probe-0.1.0-cp313-cp313-android_25_x86_64.whl",
+      "version": "0.1.0",
+      "yanked": false
+    }
+  ],
+  "ndkVersion": "30.0.16248370",
+  "pythonVersion": "3.13",
+  "schemaVersion": 1,
+  "simpleIndexes": [
+    {
+      "name": "root",
+      "path": "index.html",
+      "sha256": "9372f14bdd4c170fe39c3f0e755387f0f5d5d3e081a2f3a44a450c5d5a5e0a64"
+    },
+    {
+      "name": "pygame",
+      "path": "simple/pygame/index.html",
+      "sha256": "8d3b2c605c45698c53613f25575f6dcab7acfa6541c524cf60b50a574eb1ac4c"
+    },
+    {
+      "name": "pyrun-native-probe",
+      "path": "simple/pyrun-native-probe/index.html",
+      "sha256": "9023f31b2b6f606de75e5d868b175bd78da944363a39bc3ae99290cf6ebf23ef"
+    }
+  ],
+  "sourceRevision": "6ea681e39e21083b1a552fec730f47196baf6b32",
+  "toolchainPath": "toolchain.lock",
+  "toolchainSha256": "7d0feacb900c4c594b70df9254cfefa0ee6de78355ad56da25c7d67885753899"
+}

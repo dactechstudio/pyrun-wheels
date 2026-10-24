@@ -1,0 +1,44 @@
+{
+  "name": "pygame",
+  "version": "2.6.1",
+  "python_tag": "cp313-cp313",
+  "android_api_min": 25,
+  "abis": ["arm64_v8a", "x86_64"],
+  "license": "LGPL-2.1-or-later",
+  "release_status": "approved",
+  "source_url": "https://github.com/pygame/pygame",
+  "source_revision": "b92c0da9d1b5eba6c813138790fc1ab6cea0252c",
+  "build": {
+    "cibuildwheel": "4.3.1",
+    "ndk": "30.0.16248370",
+    "setuptools": "80.9.0",
+    "wheel": "0.45.1",
+    "cython": "3.1.3",
+    "cmake": "3.31.6",
+    "ninja": "1.13.0"
+  },
+  "patches": [
+    {
+      "path": "recipes/pygame/CMakeLists.txt",
+      "sha256": "833b36e1508bd24e6d2e7450de9c292219ca09a9e1bb67e84fc1d0ba4128bcd4"
+    },
+    {
+      "path": "scripts/prepare_pygame_source.py",
+      "sha256": "10355dadbd503d396f1c8912376eca99775b8c9fd5c7541fa5caa1f6e3c3f6df"
+    },
+    {
+      "path": "scripts/build_pygame_sdl.py",
+      "sha256": "8c42f85e6c02d91db51865469640aef7f6558b4e73fa8a46103f1f85f93fff73"
+    },
+    {
+      "path": "scripts/configure_pygame_android.py",
+      "sha256": "458424fee07c5b3e155f207af08f19afcc2e400eeffb7ff6229d654e001b41f6"
+    },
+    {
+      "path": "scripts/verify_pygame_wheel.py",
+      "sha256": "5272e169e3135c90aee36704f6b42ecad67da2560f4ea2dd6a96ff822fee2ce3"
+    }
+  ],
+  "runtime_dependencies": [],
+  "sbom": "sbom/pygame.cdx.json"
+}

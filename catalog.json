@@ -1,5 +1,5 @@
 {
-  "latestRelease": "opencv-4.11.0.86-20261024",
+  "latestRelease": "pygame-phase20-20261024",
   "releases": [
     {
       "id": "2026-10-23-3",
@@ -14,6 +14,13 @@
       "manifestSha256": "dbb10f0d0cdba4482249e7cc6f6b2c534896ba868bca0bc993b2ae4bcb65206e",
       "path": "releases/opencv-4.11.0.86-20261024/",
       "signature": "releases/opencv-4.11.0.86-20261024/manifest.json.sig"
+    },
+    {
+      "id": "pygame-phase20-20261024",
+      "manifest": "releases/pygame-phase20-20261024/manifest.json",
+      "manifestSha256": "54410aa30f7385cf7f5aeda3bdce50fbf333f2c3fb26d5a0ad7989b4ed8f784d",
+      "path": "releases/pygame-phase20-20261024/",
+      "signature": "releases/pygame-phase20-20261024/manifest.json.sig"
     }
   ],
   "schemaVersion": 1
