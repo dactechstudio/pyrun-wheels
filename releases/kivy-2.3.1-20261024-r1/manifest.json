@@ -1,0 +1,138 @@
+{
+  "androidMinApi": 25,
+  "artifacts": [
+    {
+      "abi": "arm64_v8a",
+      "androidApi": 25,
+      "filename": "kivy-2.3.1-cp313-cp313-android_25_arm64_v8a.whl",
+      "license": "MIT",
+      "name": "Kivy",
+      "patches": [
+        {
+          "path": "scripts/prepare_kivy_source.py",
+          "sha256": "631201c041b32797bd583ed72360de89896d4439bb0850b805855365507a7e69"
+        },
+        {
+          "path": "scripts/configure_kivy_android.py",
+          "sha256": "31b1c5af2965882805775dfcf6fa5efd1fe336df6f071543a4ecc6e541d6d0e9"
+        },
+        {
+          "path": "scripts/verify_kivy_wheel.py",
+          "sha256": "67e60b46f41d87759de3bbb8aa973249457f30a20cdffe93381d936d6771e0a9"
+        }
+      ],
+      "playRuntimeInstallAllowed": false,
+      "pythonTag": "cp313-cp313",
+      "recipePath": "recipes/kivy/recipe.json",
+      "recipeSha256": "aaf6f5535692bea8378f137b128d1677e450aee3356fcb4bc3c58e78dc2e2902",
+      "sbomPath": "sbom/kivy.cdx.json",
+      "sbomSha256": "914658a281a1a2cc211eade2607e833189b0fa2d7ce5cd54719fc8ea67d2684f",
+      "sha256": "72840c26f48b3d544cc93610404c760ba9cf49bca2567df471a2caa51bf555a4",
+      "sourceTreeSha256": "7716337aa9a242a64509ca245a83d560727c560420a8d422b238f683b332b0e4",
+      "sourceUrl": "https://github.com/kivy/kivy/tree/20d74dcd30f143abbd1aa94c76bafc5bd934d5bd",
+      "upstreamRevision": "20d74dcd30f143abbd1aa94c76bafc5bd934d5bd",
+      "upstreamSubmodules": {},
+      "url": "packages/kivy-2.3.1-cp313-cp313-android_25_arm64_v8a.whl",
+      "version": "2.3.1",
+      "yanked": false
+    },
+    {
+      "abi": "x86_64",
+      "androidApi": 25,
+      "filename": "kivy-2.3.1-cp313-cp313-android_25_x86_64.whl",
+      "license": "MIT",
+      "name": "Kivy",
+      "patches": [
+        {
+          "path": "scripts/prepare_kivy_source.py",
+          "sha256": "631201c041b32797bd583ed72360de89896d4439bb0850b805855365507a7e69"
+        },
+        {
+          "path": "scripts/configure_kivy_android.py",
+          "sha256": "31b1c5af2965882805775dfcf6fa5efd1fe336df6f071543a4ecc6e541d6d0e9"
+        },
+        {
+          "path": "scripts/verify_kivy_wheel.py",
+          "sha256": "67e60b46f41d87759de3bbb8aa973249457f30a20cdffe93381d936d6771e0a9"
+        }
+      ],
+      "playRuntimeInstallAllowed": false,
+      "pythonTag": "cp313-cp313",
+      "recipePath": "recipes/kivy/recipe.json",
+      "recipeSha256": "aaf6f5535692bea8378f137b128d1677e450aee3356fcb4bc3c58e78dc2e2902",
+      "sbomPath": "sbom/kivy.cdx.json",
+      "sbomSha256": "914658a281a1a2cc211eade2607e833189b0fa2d7ce5cd54719fc8ea67d2684f",
+      "sha256": "6e2652ef03fd28f651eadcce07ec5c99b33e8137513d16afe9fa1512332d7030",
+      "sourceTreeSha256": "7716337aa9a242a64509ca245a83d560727c560420a8d422b238f683b332b0e4",
+      "sourceUrl": "https://github.com/kivy/kivy/tree/20d74dcd30f143abbd1aa94c76bafc5bd934d5bd",
+      "upstreamRevision": "20d74dcd30f143abbd1aa94c76bafc5bd934d5bd",
+      "upstreamSubmodules": {},
+      "url": "packages/kivy-2.3.1-cp313-cp313-android_25_x86_64.whl",
+      "version": "2.3.1",
+      "yanked": false
+    },
+    {
+      "abi": "arm64_v8a",
+      "androidApi": 25,
+      "filename": "pyrun_native_probe-0.1.0-cp313-cp313-android_25_arm64_v8a.whl",
+      "license": "MIT",
+      "name": "pyrun-native-probe",
+      "patches": [],
+      "playRuntimeInstallAllowed": false,
+      "pythonTag": "cp313-cp313",
+      "recipePath": "recipes/native_probe/recipe.json",
+      "recipeSha256": "ed39bc83decc410a5cbf97b398591afbbabad5712b02c59875663e40f1fd12f7",
+      "sbomPath": "sbom/pyrun-native-probe.cdx.json",
+      "sbomSha256": "3f6dd9c4023bc5be75f8d245c987bac7607ed73fac4bde4a8b9052a2603445f5",
+      "sha256": "4ebb7edd8b3fdb4f5da0eac2afa360fc340abdcf7f115bfb5ff0db8855de0345",
+      "sourceTreeSha256": "94ff17a033f1fe822a44783f15ac6cd3e4448043c43ca8a1427e8c7efde1c812",
+      "sourceUrl": "https://github.com/dactechstudio/pyrun-wheels/tree/a2b04d8d6ccfe628ef3b8e832bd391b0dec0990e/recipes/native_probe",
+      "url": "packages/pyrun_native_probe-0.1.0-cp313-cp313-android_25_arm64_v8a.whl",
+      "version": "0.1.0",
+      "yanked": false
+    },
+    {
+      "abi": "x86_64",
+      "androidApi": 25,
+      "filename": "pyrun_native_probe-0.1.0-cp313-cp313-android_25_x86_64.whl",
+      "license": "MIT",
+      "name": "pyrun-native-probe",
+      "patches": [],
+      "playRuntimeInstallAllowed": false,
+      "pythonTag": "cp313-cp313",
+      "recipePath": "recipes/native_probe/recipe.json",
+      "recipeSha256": "ed39bc83decc410a5cbf97b398591afbbabad5712b02c59875663e40f1fd12f7",
+      "sbomPath": "sbom/pyrun-native-probe.cdx.json",
+      "sbomSha256": "3f6dd9c4023bc5be75f8d245c987bac7607ed73fac4bde4a8b9052a2603445f5",
+      "sha256": "8d587e50d605ec6125de4cefc59dd1f0f223da921d2f959f9ddfccd9a612ab95",
+      "sourceTreeSha256": "94ff17a033f1fe822a44783f15ac6cd3e4448043c43ca8a1427e8c7efde1c812",
+      "sourceUrl": "https://github.com/dactechstudio/pyrun-wheels/tree/a2b04d8d6ccfe628ef3b8e832bd391b0dec0990e/recipes/native_probe",
+      "url": "packages/pyrun_native_probe-0.1.0-cp313-cp313-android_25_x86_64.whl",
+      "version": "0.1.0",
+      "yanked": false
+    }
+  ],
+  "ndkVersion": "30.0.16248370",
+  "pythonVersion": "3.13",
+  "schemaVersion": 1,
+  "simpleIndexes": [
+    {
+      "name": "root",
+      "path": "index.html",
+      "sha256": "76857ad6f83cdfb10f7d15426e5c4ba54e44a9c034305f67641f0f51dac94c4f"
+    },
+    {
+      "name": "kivy",
+      "path": "simple/kivy/index.html",
+      "sha256": "24d204d33bf83b97a84eabf7d9858ceb6a086840051e17c43cda93e669481093"
+    },
+    {
+      "name": "pyrun-native-probe",
+      "path": "simple/pyrun-native-probe/index.html",
+      "sha256": "6a4975df537db820f5549bb4d5411141f5fc343ec011c0a48df9d5004cf110e9"
+    }
+  ],
+  "sourceRevision": "a2b04d8d6ccfe628ef3b8e832bd391b0dec0990e",
+  "toolchainPath": "toolchain.lock",
+  "toolchainSha256": "b29bab0c2d8f86518b5e1974cf452548510f01ee12919d6e548d5a31b7de9d16"
+}

@@ -1,5 +1,5 @@
 {
-  "latestRelease": "pygame-phase20-20261024",
+  "latestRelease": "kivy-2.3.1-20261024-r1",
   "releases": [
     {
       "id": "2026-10-23-3",
@@ -21,6 +21,13 @@
       "manifestSha256": "54410aa30f7385cf7f5aeda3bdce50fbf333f2c3fb26d5a0ad7989b4ed8f784d",
       "path": "releases/pygame-phase20-20261024/",
       "signature": "releases/pygame-phase20-20261024/manifest.json.sig"
+    },
+    {
+      "id": "kivy-2.3.1-20261024-r1",
+      "manifest": "releases/kivy-2.3.1-20261024-r1/manifest.json",
+      "manifestSha256": "02522c46280ebf2550c3f2a29c118c4314746a95c23b2c7ca269f227f4407792",
+      "path": "releases/kivy-2.3.1-20261024-r1/",
+      "signature": "releases/kivy-2.3.1-20261024-r1/manifest.json.sig"
     }
   ],
   "schemaVersion": 1
