@@ -236,7 +236,7 @@ jobs:
           CIBW_TEST_SKIP: "*"
           CIBW_ENVIRONMENT_ANDROID: >-
             NDKPLATFORM=${{ env.NDKPLATFORM }} LIBLINK=1 PYRUN_ANDROID=1
-            KIVY_USE_SDL2=1 KIVY_USE_OPENGL_ES2=1 KIVY_SPLIT_EXAMPLES=1
+            USE_SDL2=1 USE_OPENGL_ES2=1 KIVY_SPLIT_EXAMPLES=1
             KIVY_SDL2_PATH=${{ env.KIVY_SDL2_PATH }}
           CIBW_REPAIR_WHEEL_COMMAND_ANDROID: >-
             auditwheel repair --exclude libSDL2.so --exclude libSDL2_image.so

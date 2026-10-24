@@ -237,6 +237,10 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         self.assertTrue(all("inputs.build_kivy == true" in step["if"] for step in kivy_steps))
         self.assertEqual(kivy_steps[2]["env"]["CIBW_TEST_SKIP"], "*")
         self.assertEqual(kivy_steps[2]["env"]["CIBW_BEFORE_BUILD"].count("Cython==3.0.11"), 1)
+        kivy_build_environment = kivy_steps[2]["env"]["CIBW_ENVIRONMENT_ANDROID"]
+        self.assertIn("USE_SDL2=1", kivy_build_environment)
+        self.assertIn("USE_OPENGL_ES2=1", kivy_build_environment)
+        self.assertNotIn("KIVY_USE_SDL2", kivy_build_environment)
         for shared_sdl in ("libSDL2.so", "libSDL2_image.so", "libSDL2_mixer.so", "libSDL2_ttf.so"):
             self.assertIn(f"--exclude {shared_sdl}", kivy_steps[2]["env"]["CIBW_REPAIR_WHEEL_COMMAND_ANDROID"])
 
