@@ -21,7 +21,7 @@
   "patches": [
     {
       "path": "scripts/prepare_kivy_source.py",
-      "sha256": "0039ec452c3d577270b3bb67658e1d8e4147e37bc24059e2920a6a84ce83a611"
+      "sha256": "631201c041b32797bd583ed72360de89896d4439bb0850b805855365507a7e69"
     },
     {
       "path": "scripts/configure_kivy_android.py",

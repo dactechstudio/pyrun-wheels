@@ -325,6 +325,13 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             setup.write_text(
                 "if platform in ('ios', 'android'):\n"
                 "    # NEVER use or declare cython on these platforms\n"
+                "    if not sdl2_valid and platform != \"ios\":\n"
+                "        # use pkg-config approach instead\n"
+                "        sdl2_flags = pkgconfig('sdl2', 'SDL2_ttf', 'SDL2_image', 'SDL2_mixer')\n"
+                "        if 'libraries' in sdl2_flags:\n"
+                "            print('SDL2 found via pkg-config')\n"
+                "            c_options['use_sdl2'] = True\n"
+                "            sdl2_source = 'pkg-config'\n"
                 "                [\n                    'setupconfig.py',\n                ] + binary_deps\n",
                 encoding="utf-8",
             )
@@ -340,6 +347,7 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             self.assertIn("SDL_GL_SwapWindow(SDL_Window * window) nogil\n", (root / "kivy" / "lib" / "sdl2.pxi").read_text(encoding="utf-8"))
             window_source = (root / "kivy" / "core" / "window" / "_window_sdl2.pyx").read_text(encoding="utf-8")
             self.assertEqual(1, window_source.count("with nogil:\n            SDL_GL_SwapWindow"))
+            self.assertIn('platform not in ("ios", "android")', setup.read_text(encoding="utf-8"))
             self.assertIn("platform == 'android' and not USE_SDL2", clipboard.read_text(encoding="utf-8"))
             self.assertTrue((root / "kivy" / "LICENSE.txt").is_file())
 

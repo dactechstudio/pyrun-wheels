@@ -79,6 +79,26 @@ def prepare_android_source(source_root: Path) -> None:
         "if platform in ('ios', 'android'):\n    # NEVER use or declare cython on these platforms",
         "if platform == 'ios':\n    # PyRun compiles Android extensions from the pinned Cython sources",
     )
+    replace_once(
+        setup,
+        """    if not sdl2_valid and platform != "ios":
+        # use pkg-config approach instead
+        sdl2_flags = pkgconfig('sdl2', 'SDL2_ttf', 'SDL2_image', 'SDL2_mixer')
+        if 'libraries' in sdl2_flags:
+            print('SDL2 found via pkg-config')
+            c_options['use_sdl2'] = True
+            sdl2_source = 'pkg-config'
+""",
+        """    if not sdl2_valid and platform not in ("ios", "android"):
+        # Android uses PyRun's pinned SDL paths; avoid target-shell pkg-config.
+        # use pkg-config approach instead
+        sdl2_flags = pkgconfig('sdl2', 'SDL2_ttf', 'SDL2_image', 'SDL2_mixer')
+        if 'libraries' in sdl2_flags:
+            print('SDL2 found via pkg-config')
+            c_options['use_sdl2'] = True
+            sdl2_source = 'pkg-config'
+""",
+    )
 
     pyproject = source_root / "pyproject.toml"
     for old, new in (
