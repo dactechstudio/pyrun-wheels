@@ -25,7 +25,7 @@
     },
     {
       "path": "scripts/configure_kivy_android.py",
-      "sha256": "7ac16671d213891fbc1d13055a720b2eecbda19f6fc8fe41a5a94ddbc1533930"
+      "sha256": "31b1c5af2965882805775dfcf6fa5efd1fe336df6f071543a4ecc6e541d6d0e9"
     },
     {
       "path": "scripts/verify_kivy_wheel.py",

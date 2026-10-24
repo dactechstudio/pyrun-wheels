@@ -13,7 +13,8 @@ SOURCE_DIRS = {
     "sdl": ("SDL-release-2.32.10", "SDL-release-2.32.10", "include", "SDL.h"),
     "image": ("SDL_image-release-2.8.12", "SDL_image-release-2.8.12", "include", "SDL_image.h"),
     "mixer": ("SDL_mixer-release-2.8.2", "SDL_mixer-release-2.8.2", "include", "SDL_mixer.h"),
-    "ttf": ("SDL_ttf-release-2.24.0", "SDL_ttf-release-2.24.0", "include", "SDL_ttf.h"),
+    # SDL_ttf 2.24.0 (the SDL2 branch) keeps SDL_ttf.h at its source root.
+    "ttf": ("SDL_ttf-release-2.24.0", "SDL_ttf-release-2.24.0", ".", "SDL_ttf.h"),
 }
 LIBRARIES = ("libSDL2.so", "libSDL2_image.so", "libSDL2_mixer.so", "libSDL2_ttf.so")
 
