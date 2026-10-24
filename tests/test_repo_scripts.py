@@ -273,7 +273,7 @@ class AndroidWheelVerificationTests(unittest.TestCase):
             self.assertIn('"src_py/LICENSE.sdl_gfx.txt"', setup.read_text(encoding="utf-8"))
             self.assertIn('"src_py/LICENSE.libpng.txt"', setup.read_text(encoding="utf-8"))
             self.assertIn('"src_py/LICENSE.libjpeg-turbo.txt"', setup.read_text(encoding="utf-8"))
-            self.assertIn("self.__spawn(cmd, dry_run=self.dry_run, **kwargs)", setup.read_text(encoding="utf-8"))
+            self.assertIn("self.__spawn(cmd, **kwargs)", setup.read_text(encoding="utf-8"))
             self.assertIn("extension.extra_link_args.append('-Wl,-z,max-page-size=16384')", setup.read_text(encoding="utf-8"))
 
     def test_pygame_android_preserves_statically_linked_image_library_notices(self) -> None:

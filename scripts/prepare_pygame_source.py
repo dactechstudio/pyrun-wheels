@@ -155,7 +155,7 @@ def add_android_license_notices(pygame_source: Path) -> None:
         raise ValueError("could not safely adapt Pygame's AVX2 compiler hook to Python 3.13")
     setup_text = setup_text.replace(
         avx_spawn,
-        "        self.__spawn(cmd, dry_run=self.dry_run, **kwargs)",
+        "        self.__spawn(cmd, **kwargs)",
     )
     setup_marker = "for e in extensions:\n    # Only define the ARM_NEON defines if they have been enabled at build time."
     if setup_text.count(setup_marker) != 1:

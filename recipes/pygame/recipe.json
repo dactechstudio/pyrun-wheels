@@ -24,7 +24,7 @@
     },
     {
       "path": "scripts/prepare_pygame_source.py",
-      "sha256": "76bd82c1cf1af467de15f7b403dc2feeaf4c3dd62acc6bebbc49504741fca835"
+      "sha256": "10355dadbd503d396f1c8912376eca99775b8c9fd5c7541fa5caa1f6e3c3f6df"
     },
     {
       "path": "scripts/build_pygame_sdl.py",
