@@ -44,6 +44,14 @@ marked experimental, and the signing tool blocks it from a signed snapshot
 until a reviewed change approves it after build-output, license, and package
 content checks.
 
+The Kivy 2.3.1 recipe is approved and published for both supported ABIs as
+`kivy-2.3.1-20261024-r1`. Its wheels passed the package verifier, including the
+required SDL extensions/linkage and 16 KB ELF alignment checks. The signed
+manifest is available at
+<https://dactechstudio.github.io/pyrun-wheels/releases/kivy-2.3.1-20261024-r1/manifest.json>.
+This is static build/package verification only; Android import and GUI runtime
+acceptance have not been performed.
+
 The separate `Sign and promote wheel snapshot` workflow is manually dispatched
 from `main`. It accepts only a successful `build-android.yml` run on `main`,
 requires the protected `wheel-release` environment, signs and verifies the
