@@ -32,7 +32,7 @@
     },
     {
       "path": "scripts/configure_pygame_android.py",
-      "sha256": "31a517e3e84829df6ac120a5d347c889fae01161c3ed889e4392af2a852c0489"
+      "sha256": "b25bde277a94b6cded0e4afffd2807a4ba6e97bf81de8d5435afa2d4d17f9318"
     },
     {
       "path": "scripts/verify_pygame_wheel.py",

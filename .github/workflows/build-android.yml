@@ -199,14 +199,15 @@ jobs:
           python scripts/configure_pygame_android.py \
             --pygame-source "$RUNNER_TEMP/pygame-source/pygame-2.6.1/pygame-2.6.1" \
             --source-root "$RUNNER_TEMP/pygame-source" \
-            --native-build "$RUNNER_TEMP/pygame-sdl-build"
+            --native-build "$RUNNER_TEMP/pygame-sdl-build" \
+            --abi "${{ matrix.abi }}"
 
       - name: Build Pygame wheel without device/emulator execution
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_pygame == true }}
         shell: bash
         env:
           CIBW_TEST_SKIP: "*"
-          CIBW_ENVIRONMENT_ANDROID: PYGAME_ANDROID=1
+          CIBW_ENVIRONMENT_ANDROID: ${{ matrix.abi == 'x86_64' && 'PYGAME_ANDROID=1 PYGAME_DETECT_AVX2=1' || 'PYGAME_ANDROID=1' }}
           CIBW_BEFORE_BUILD: python -m pip install --disable-pip-version-check setuptools==80.9.0 wheel==0.45.1 Cython==3.1.3
         run: |
           python -m cibuildwheel --platform android \

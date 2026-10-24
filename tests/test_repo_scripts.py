@@ -204,7 +204,10 @@ class AndroidWheelVerificationTests(unittest.TestCase):
         self.assertEqual(len(pygame_steps), 5)
         self.assertTrue(all("inputs.build_pygame == true" in step["if"] for step in pygame_steps))
         self.assertEqual(pygame_steps[3]["env"]["CIBW_TEST_SKIP"], "*")
-        self.assertEqual(pygame_steps[3]["env"]["CIBW_ENVIRONMENT_ANDROID"], "PYGAME_ANDROID=1")
+        self.assertEqual(
+            pygame_steps[3]["env"]["CIBW_ENVIRONMENT_ANDROID"],
+            "${{ matrix.abi == 'x86_64' && 'PYGAME_ANDROID=1 PYGAME_DETECT_AVX2=1' || 'PYGAME_ANDROID=1' }}",
+        )
 
     def test_pygame_recipe_pins_android_source_stack_and_build_inputs(self) -> None:
         root = Path(__file__).resolve().parents[1]
@@ -306,6 +309,7 @@ class AndroidWheelVerificationTests(unittest.TestCase):
                 "PNG = {png_includes} -lpng16\n"
                 "DEBUG =\n"
                 "imageext src_c/imageext.c $(SDL) $(IMAGE) $(PNG) $(JPEG) $(DEBUG)\n"
+                "surface src_c/surface.c src_c/alphablit.c src_c/surface_fill.c $(SDL) $(DEBUG)\n"
                 "base src_c/base.c $(SDL) $(DEBUG)\n"
                 "display src_c/display.c $(SDL) $(DEBUG)\n"
                 "event src_c/event.c $(SDL) $(DEBUG)\n"
@@ -336,11 +340,57 @@ class AndroidWheelVerificationTests(unittest.TestCase):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(b"")
 
-            result = configure_pygame_android(pygame, root, native).read_text(encoding="utf-8")
+            result = configure_pygame_android(pygame, root, native, "x86_64").read_text(encoding="utf-8")
 
             self.assertIn("-lpng16 -lz -lm", result)
             self.assertIn("-ljpeg -lm", result)
+            self.assertIn("src_c/simd_blitters_sse2.c", result)
+            self.assertIn("src_c/simd_blitters_avx2.c", result)
             self.assertNotIn("-Wl,-z,max-page-size=16384", result)
+
+    def test_pygame_android_arm64_setup_uses_neon_compatible_simd_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            pygame = root / "pygame" / "pygame-2.6.1"
+            template = pygame / "buildconfig" / "Setup.Android.SDL2.in"
+            template.parent.mkdir(parents=True)
+            template.write_text(
+                "SDL = {sdl_includes} -lSDL2\n"
+                "JPEG = {jpeg_includes} -ljpeg\n"
+                "PNG = {png_includes} -lpng16\n"
+                "DEBUG =\n"
+                "surface src_c/surface.c src_c/alphablit.c src_c/surface_fill.c $(SDL) $(DEBUG)\n"
+                "base src_c/base.c $(SDL) $(DEBUG)\n"
+                "display src_c/display.c $(SDL) $(DEBUG)\n"
+                "event src_c/event.c $(SDL) $(DEBUG)\n"
+                "font src_c/font.c $(SDL) $(DEBUG)\n"
+                "imageext src_c/imageext.c $(SDL) $(IMAGE) $(PNG) $(JPEG) $(DEBUG)\n"
+                "mixer src_c/mixer.c $(SDL) $(DEBUG)\n"
+                "mixer_music src_c/music.c $(SDL) $(DEBUG)\n"
+                "_sdl2.video src_c/_sdl2/video.c $(SDL) $(DEBUG)\n",
+                encoding="utf-8",
+            )
+            for relative in (
+                "SDL-release-2.32.10/SDL-release-2.32.10",
+                "SDL_image-release-2.8.12/SDL_image-release-2.8.12",
+                "SDL_mixer-release-2.8.2/SDL_mixer-release-2.8.2",
+                "SDL_ttf-release-2.24.0/SDL_ttf-release-2.24.0",
+                "libpng-1.6.59/libpng-1.6.59",
+                "libjpeg-turbo-3.2.0/libjpeg-turbo-3.2.0",
+            ):
+                source = root / relative
+                source.mkdir(parents=True)
+                (source / "CMakeLists.txt").write_text("", encoding="utf-8")
+            native = root / "native"
+            for library in ("libSDL2.so", "libSDL2_image.so", "libSDL2_mixer.so", "libSDL2_ttf.so", "libpng16.a", "libjpeg.a"):
+                target = native / library
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(b"")
+
+            result = configure_pygame_android(pygame, root, native, "arm64_v8a").read_text(encoding="utf-8")
+
+            self.assertIn("src_c/simd_blitters_sse2.c", result)
+            self.assertNotIn("src_c/simd_blitters_avx2.c", result)
 
     def test_opencv_recipe_pins_upstream_inputs_and_patch_digest(self) -> None:
         root = Path(__file__).resolve().parents[1]
