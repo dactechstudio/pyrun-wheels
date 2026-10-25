@@ -82,7 +82,7 @@ jobs:
               --notes "Signed Android C/C++/Fortran compiler packs for PyRun. Verify each manifest signature and pack SHA-256 from the catalog before installation."
           fi
           gh release upload "$RELEASE_ID" --repo "$GITHUB_REPOSITORY" \
-            "$arm64_pack" "$x86_64_pack" --clobber
+            "$arm64_pack" "$x86_64_pack"
 
       - name: Add verified compiler packs to gh-pages history
         shell: bash
