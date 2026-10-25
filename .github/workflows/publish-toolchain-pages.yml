@@ -92,6 +92,7 @@ jobs:
           git -C "$state_dir" add --all
           if ! git -C "$state_dir" diff --cached --quiet; then
             git -C "$state_dir" commit -m "Publish signed compiler packs $RELEASE_ID"
+            git -C "$state_dir" remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
             git -C "$state_dir" push origin HEAD:gh-pages
           fi
           mkdir -p dist/pages-site
