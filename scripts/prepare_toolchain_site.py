@@ -51,12 +51,23 @@ def _load_catalog(path: Path) -> dict:
     return value
 
 
-def prepare(site: Path, release_id: str, public_key: Path, arm64_pack: Path, x86_64_pack: Path) -> None:
+def prepare(
+    site: Path,
+    release_id: str,
+    public_key: Path,
+    arm64_pack: Path,
+    x86_64_pack: Path,
+    pack_base_url: str | None = None,
+) -> None:
     site = site.resolve()
     if not site.is_dir():
         raise ValueError("Pages site directory is missing")
     if not release_id or "/" in release_id or "\\" in release_id or ".." in release_id:
         raise ValueError("release id is unsafe")
+    if pack_base_url is not None:
+        pack_base_url = pack_base_url.rstrip("/")
+        if not pack_base_url.startswith("https://"):
+            raise ValueError("pack base URL must use HTTPS")
     catalog_path = site / "catalog" / "toolchains.json"
     catalog_path.parent.mkdir(parents=True, exist_ok=True)
     catalog = _load_catalog(catalog_path)
@@ -74,14 +85,20 @@ def prepare(site: Path, release_id: str, public_key: Path, arm64_pack: Path, x86
                 raise FileExistsError(f"refusing to replace published compiler pack: {destination}")
             destination.mkdir(parents=True, exist_ok=False)
             archive_name = f"pyrun-toolchain-{abi}-{version}.tar.xz"
-            shutil.copyfile(pack, destination / archive_name)
+            if pack_base_url is None:
+                shutil.copyfile(pack, destination / archive_name)
             shutil.copyfile(extracted / "manifest.json", destination / "manifest.json")
             shutil.copyfile(extracted / "manifest.json.sig", destination / "manifest.json.sig")
+            pack_url = (
+                f"{pack_base_url}/{archive_name}"
+                if pack_base_url is not None
+                else f"../toolchains/{abi}/{version}/{archive_name}"
+            )
             entry = {
                 "abi": abi,
                 "version": version,
                 "releaseId": release_id,
-                "pack": f"../toolchains/{abi}/{version}/{archive_name}",
+                "pack": pack_url,
                 "packSha256": _sha256(pack),
                 "packSize": pack.stat().st_size,
                 "manifest": f"../toolchains/{abi}/{version}/manifest.json",
@@ -102,8 +119,19 @@ def main() -> None:
     parser.add_argument("--public-key", required=True, type=Path)
     parser.add_argument("--arm64-pack", required=True, type=Path)
     parser.add_argument("--x86-64-pack", required=True, type=Path)
+    parser.add_argument(
+        "--pack-base-url",
+        help="HTTPS base URL for large pack assets; omit to store packs in the Pages site",
+    )
     args = parser.parse_args()
-    prepare(args.site, args.release_id, args.public_key, args.arm64_pack, args.x86_64_pack)
+    prepare(
+        args.site,
+        args.release_id,
+        args.public_key,
+        args.arm64_pack,
+        args.x86_64_pack,
+        args.pack_base_url,
+    )
     print(f"Published compiler-pack catalog release {args.release_id}")
 
 

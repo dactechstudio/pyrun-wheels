@@ -67,6 +67,23 @@ jobs:
           gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'signed-compiler-packs-*' --dir incoming
           test "$(find incoming -type f -name '*.tar.xz' | wc -l)" -eq 2
 
+      - name: Publish large compiler packs as release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          arm64_pack="$(find incoming -type f -name '*arm64_v8a*.tar.xz' -print -quit)"
+          x86_64_pack="$(find incoming -type f -name '*x86_64*.tar.xz' -print -quit)"
+          test -n "$arm64_pack" && test -n "$x86_64_pack"
+          if ! gh release view "$RELEASE_ID" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$RELEASE_ID" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target main \
+              --title "PyRun Android compiler packs $RELEASE_ID" \
+              --notes "Signed Android C/C++/Fortran compiler packs for PyRun. Verify each manifest signature and pack SHA-256 from the catalog before installation."
+          fi
+          gh release upload "$RELEASE_ID" --repo "$GITHUB_REPOSITORY" \
+            "$arm64_pack" "$x86_64_pack" --clobber
+
       - name: Add verified compiler packs to gh-pages history
         shell: bash
         run: |
@@ -85,6 +102,7 @@ jobs:
             --site "$state_dir" \
             --release-id "$RELEASE_ID" \
             --public-key keys/pyrun-ed25519-public.pem \
+            --pack-base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_ID}" \
             --arm64-pack "$(find incoming -type f -name '*arm64_v8a*.tar.xz' -print -quit)" \
             --x86-64-pack "$(find incoming -type f -name '*x86_64*.tar.xz' -print -quit)"
           git -C "$state_dir" config user.name "github-actions[bot]"
