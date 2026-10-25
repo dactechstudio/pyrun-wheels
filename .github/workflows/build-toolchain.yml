@@ -63,7 +63,7 @@ jobs:
             system_image: system-images;android-35;google_apis;arm64-v8a
             emulator_abi: arm64-v8a
             runner: macos-14
-            emulator_accel: auto
+            emulator_accel: off
           - abi: x86_64
             system_image: system-images;android-35;google_apis;x86_64
             emulator_abi: x86_64
