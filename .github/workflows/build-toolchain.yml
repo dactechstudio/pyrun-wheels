@@ -62,7 +62,7 @@ jobs:
           - abi: arm64_v8a
             system_image: system-images;android-35;google_apis;arm64-v8a
             emulator_abi: arm64-v8a
-            runner: ubuntu-24.04-arm
+            runner: macos-14
             emulator_accel: auto
           - abi: x86_64
             system_image: system-images;android-35;google_apis;x86_64
@@ -94,8 +94,12 @@ jobs:
           fi
           sdk_root="$RUNNER_TEMP/android-sdk"
           tools_zip="$RUNNER_TEMP/commandlinetools.zip"
-          curl --fail --location --retry 3 --output "$tools_zip" \
-            https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip
+          case "$(uname -s)" in
+            Darwin) tools_url="https://dl.google.com/android/repository/commandlinetools-mac-13114758_latest.zip" ;;
+            Linux) tools_url="https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip" ;;
+            *) echo "Unsupported runner OS: $(uname -s)" >&2; exit 1 ;;
+          esac
+          curl --fail --location --retry 3 --output "$tools_zip" "$tools_url"
           rm -rf "$sdk_root"
           mkdir -p "$sdk_root/cmdline-tools"
           unzip -q "$tools_zip" -d "$RUNNER_TEMP/android-cmdline"
