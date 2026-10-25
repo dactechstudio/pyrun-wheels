@@ -62,9 +62,11 @@ jobs:
           - abi: arm64_v8a
             system_image: system-images;android-35;google_apis;arm64-v8a
             emulator_abi: arm64-v8a
+            emulator_accel: off
           - abi: x86_64
             system_image: system-images;android-35;google_apis;x86_64
             emulator_abi: x86_64
+            emulator_accel: auto
     runs-on: ubuntu-24.04
     steps:
       - name: Check out proof scripts
@@ -102,15 +104,22 @@ jobs:
         run: |
           set -euo pipefail
           emulator="${ANDROID_HOME}/emulator/emulator"
-          "$emulator" -avd pyrun-${{ matrix.abi }} -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel off >"$RUNNER_TEMP/emulator.log" 2>&1 &
+          adb start-server >/dev/null
+          "$emulator" -avd pyrun-${{ matrix.abi }} -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel "${{ matrix.emulator_accel }}" >"$RUNNER_TEMP/emulator.log" 2>&1 &
           echo $! >"$RUNNER_TEMP/emulator.pid"
-          adb wait-for-device
+          device_ready=false
           for attempt in $(seq 1 120); do
-            booted="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
-            [ "$booted" = "1" ] && break
+            if timeout 10s adb wait-for-device >/dev/null 2>&1; then
+              device_ready=true
+              booted="$(timeout 10s adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+              [ "$booted" = "1" ] && break
+            fi
             sleep 2
           done
-          [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ]
+          if [ "$device_ready" != true ] || [ "$(timeout 10s adb shell getprop sys.boot_completed | tr -d '\r')" != "1" ]; then
+            cat "$RUNNER_TEMP/emulator.log" || true
+            exit 1
+          fi
           adb shell settings put global window_animation_scale 0
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
