@@ -2,8 +2,10 @@
 
 The reference application's compiler archive is not redistributed here.  This
 builder consumes the public Termux package index, records every package and
-digest, and emits a pack containing Android-hosted Clang/LLVM/Flang plus the
-build tools used by PyRun.  The generated manifest is signed by the protected
+digest, and emits a compact pack containing Android-hosted Clang/LLVM/Flang
+plus Make, m4 and pkg-config. CMake, Ninja and the standalone binutils package
+are intentionally left out of this runtime profile; native recipes can use the
+Android NDK build tools. The generated manifest is signed by the protected
 release workflow after this script completes.
 
 The pack is intentionally installed under PyRun's private files directory. A
@@ -39,10 +41,8 @@ REQUIRED_PACKAGES = (
     "lld",
     "llvm",
     "make",
-    "cmake",
-    "ninja",
+    "m4",
     "pkg-config",
-    "binutils",
 )
 TOOL_NAMES = (
     "clang",
@@ -51,8 +51,7 @@ TOOL_NAMES = (
     "llvm-ar",
     "llvm-strip",
     "make",
-    "cmake",
-    "ninja",
+    "m4",
     "pkg-config",
     "flang",
 )
@@ -387,8 +386,7 @@ def _create_wrappers(root: Path, abi: str) -> dict[str, str]:
         "llvm-ar": "bin/llvm-ar",
         "llvm-strip": "bin/llvm-strip",
         "make": "bin/make",
-        "cmake": "bin/cmake",
-        "ninja": "bin/ninja",
+        "m4": "bin/m4",
         "pkg-config": "bin/pkg-config",
     }
     for name, relative in tools.items():
@@ -414,7 +412,7 @@ def _manifest(root: Path, abi: str, version: str, packages: list[dict[str, str]]
         "abi": abi,
         "androidMinApi": 25,
         "installPrefix": ANDROID_PREFIX,
-        "requiredTools": ["clang", "clang++", "ld.lld", "llvm-ar", "llvm-strip", "make", "cmake", "ninja", "pkg-config"],
+        "requiredTools": ["clang", "clang++", "ld.lld", "llvm-ar", "llvm-strip", "make", "m4", "pkg-config"],
         "fortranTools": ["flang"],
         "tools": records,
         "source": {

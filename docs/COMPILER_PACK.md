@@ -6,7 +6,10 @@ Clang/LLVM/LLD/Flang, Make, CMake, Ninja and pkg-config packages, and records
 the exact package URLs and SHA-256 values inside each pack manifest.
 
 The builder creates a private-prefix pack for PyRun rather than copying the
-reference app's proprietary archive. The pack includes three proof programs:
+reference app's proprietary archive. The compact profile keeps Clang/Flang,
+Make, m4, pkg-config and the required sysroot/runtime; CMake, Ninja and the
+standalone binutils package are intentionally excluded. The pack includes
+three proof programs:
 
 - C compiled by `clang`;
 - C++ compiled by `clang++`;

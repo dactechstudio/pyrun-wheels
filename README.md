@@ -76,6 +76,23 @@ configured for the legacy `main` branch source; the publisher does not change
 repository settings automatically. The `gh-pages` branch is only durable
 release history, not the Pages build source.
 
+## Android compiler packs (Phase 25)
+
+The separate `Build and prove signed Android compiler packs` workflow builds a
+real Android-hosted compiler pack for both `arm64_v8a` and `x86_64` from the
+pinned public Termux package index. It contains Clang/Clang++, LLD, LLVM
+Make, m4, pkg-config and LLVM Flang, with C/C++/Fortran
+proof sources. When `run_android_proof` is enabled, managed Android emulators
+compile and execute all three proofs before the protected signing job is
+allowed to run. The signing job emits two immutable signed pack artifacts.
+
+Run `Publish signed Android compiler packs to GitHub Pages` with that signing
+run ID and a new release ID to publish `catalog/toolchains.json` and the pack
+archives. The PyRun app verifies the archive digest, Ed25519 manifest
+signature and tool hashes before activation; no compiler is enabled when a
+pack is missing or invalid. The source app's proprietary compiler archive is
+not redistributed.
+
 No physical device is required for the optional x86_64 smoke test. Full
 arm64-v8a import smoke coverage needs a runner that can provide a working
 Android ARM64 emulator. See [`PHASE16.md`](PHASE16.md) for status, signing,
@@ -182,7 +199,7 @@ python scripts/yank_version.py unyank pyrun-native-probe 0.1.0
 - The Pages publisher is separate from the build and signing workflows. It
   requires a protected environment, a valid signature, and a reviewed release
   action; it never receives the private signing key.
-- Arbitrary pip packages, sdists, runtime native-wheel downloads, compilers,
+- Arbitrary pip packages, sdists, runtime native-wheel downloads,
   TensorFlow, PyTorch and SciPy are outside this proof package's scope. OpenCV
   has a separate experimental, build-only recipe and is not yet a published or
   runtime-verified package.

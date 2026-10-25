@@ -24,7 +24,7 @@ def validate_manifest(path: Path) -> dict:
     if not isinstance(tools, list) or not tools:
         raise ValueError("compiler-pack tool records are missing")
     names = {item.get("name") for item in tools if isinstance(item, dict)}
-    required = {"clang", "clang++", "ld.lld", "llvm-ar", "llvm-strip", "make", "cmake", "ninja", "pkg-config"}
+    required = {"clang", "clang++", "ld.lld", "llvm-ar", "llvm-strip", "make", "m4", "pkg-config"}
     if not required.issubset(names):
         raise ValueError(f"compiler pack is missing required tools: {sorted(required - names)}")
     return value
