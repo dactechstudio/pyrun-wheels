@@ -136,7 +136,11 @@ jobs:
             export ANDROID_I_WANT_MY_TCG=yes
           fi
           adb start-server >/dev/null
-          "$emulator" -avd pyrun-${{ matrix.abi }} -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel "${{ matrix.emulator_accel }}" >"$RUNNER_TEMP/emulator.log" 2>&1 &
+          emulator_args=(-avd "pyrun-${{ matrix.abi }}" -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel "${{ matrix.emulator_accel }}")
+          if [ "${{ matrix.force_tcg }}" = "true" ]; then
+            emulator_args+=(-qemu -accel tcg,thread=multi)
+          fi
+          "$emulator" "${emulator_args[@]}" >"$RUNNER_TEMP/emulator.log" 2>&1 &
           echo $! >"$RUNNER_TEMP/emulator.pid"
           device_ready=false
           for attempt in $(seq 1 120); do
