@@ -30,8 +30,11 @@ def _extract(pack: Path, destination: Path) -> Path:
                 raise ValueError(f"compiler pack contains an unsafe archive member: {member.name}")
             if member.issym() or member.islnk():
                 link = Path(member.linkname)
-                if link.is_absolute() or ".." in link.parts:
+                if link.is_absolute():
                     raise ValueError(f"compiler pack contains an unsafe link: {member.name}")
+                link_target = (destination / name.parent / link).resolve()
+                if not link_target.is_relative_to(destination.resolve()):
+                    raise ValueError(f"compiler pack link escapes its root: {member.name}")
             target = (destination / name).resolve()
             if not target.is_relative_to(destination.resolve()):
                 raise ValueError(f"compiler pack escapes its root: {member.name}")
