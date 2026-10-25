@@ -27,9 +27,17 @@ exception, not an emulator-proof substitute for future automated runs.
 
 `publish-toolchain-pages.yml` is a separate, manual publication step. It
 downloads only the successful signed run, verifies both signatures and every
-tool digest, then adds immutable entries to `catalog/toolchains.json` and the
-`gh-pages` Pages history. The app installer verifies the outer archive digest
-and inner Ed25519 signature before atomically activating a pack.
+tool digest, uploads the large archives as immutable GitHub Release assets,
+then adds the catalog, manifests and signatures to `catalog/toolchains.json`
+and the `gh-pages` Pages history. This split is required because GitHub rejects
+individual Git/Pages files larger than 100 MB. The app installer follows the
+HTTPS asset URL from the catalog, verifies the outer archive digest and inner
+Ed25519 signature, then atomically activates a pack.
+
+The first published compiler release is
+[`termux-2026.10.25-r3`](https://github.com/dactechstudio/pyrun-wheels/releases/tag/termux-2026.10.25-r3),
+with its catalog at
+[`catalog/toolchains.json`](https://dactechstudio.github.io/pyrun-wheels/catalog/toolchains.json).
 
 The workflow is intentionally not considered a completed Phase 25 proof until
 one successful run has produced both ABI artifacts and either the Android
