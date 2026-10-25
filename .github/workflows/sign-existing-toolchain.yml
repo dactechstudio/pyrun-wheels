@@ -1,0 +1,84 @@
+name: Sign existing Android compiler packs
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Build workflow run ID whose exact compiler-pack artifacts were physically proved
+        required: true
+        type: string
+      version:
+        description: Immutable compiler-pack version embedded in the source artifacts
+        required: true
+        type: string
+      physical_device_proof:
+        description: Confirm that a real Android device proof was completed before this signing request
+        required: true
+        type: boolean
+        default: false
+      physical_device_model:
+        description: Device model recorded in docs/PHASE_25_PHYSICAL_PROOF.md
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  sign:
+    name: Sign physically proved compiler packs
+    if: ${{ inputs.physical_device_proof == true && inputs.physical_device_model != '' }}
+    runs-on: ubuntu-24.04
+    environment:
+      name: wheel-release
+    env:
+      PYRUN_ED25519_PRIVATE_KEY: ${{ secrets.PYRUN_ED25519_PRIVATE_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out release tooling
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Set up CPython
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.13.17"
+
+      - name: Download exact artifacts from the source build run
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$PYRUN_ED25519_PRIVATE_KEY"
+          mkdir -p incoming
+          gh run download "${{ inputs.source_run_id }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern 'compiler-pack-*' \
+            --dir incoming
+          test "$(find incoming -name '*.tar.xz' | wc -l)" -eq 2
+
+      - name: Sign and verify the exact manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Approved physical-device proof: ${{ inputs.physical_device_model }}"
+          mkdir -p signed
+          for archive in incoming/*.tar.xz; do
+            abi="$(basename "$archive" | sed -E 's/^pyrun-toolchain-([^-]+)-.*$/\1/')"
+            root="$RUNNER_TEMP/signed-$abi"
+            mkdir -p "$root"
+            tar -xJf "$archive" -C "$root"
+            test "$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$root/manifest.json")" = "${{ inputs.version }}"
+            python scripts/sign_toolchain_manifest.py sign "$root/manifest.json" --private-key-env PYRUN_ED25519_PRIVATE_KEY
+            python scripts/sign_toolchain_manifest.py verify "$root/manifest.json" --public-key keys/pyrun-ed25519-public.pem --signature "$root/manifest.json.sig"
+            signed_archive="$GITHUB_WORKSPACE/signed/pyrun-toolchain-$abi-${{ inputs.version }}.tar.xz"
+            (cd "$root" && tar -cJf "$signed_archive" -- *)
+          done
+
+      - name: Upload signed packs for reviewed Pages publication
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: signed-compiler-packs-${{ inputs.version }}
+          path: signed/*.tar.xz
+          if-no-files-found: error
+          retention-days: 90
