@@ -267,21 +267,40 @@ def _write_wrapper(
     resource_dir: str | None = None,
     extra: str = "",
     argument_prefix: str = "",
+    target_triple: str | None = None,
+    cxx_include: bool = False,
+    passthrough_arg: str | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    target_flags = ""
+    if target_triple:
+        abi_include = target_triple.removesuffix("24")
+        target_flags = (
+            f'--target={target_triple} --sysroot="$PYRUN_TOOLCHAIN_ROOT" '
+            + (f'-isystem "$PYRUN_TOOLCHAIN_ROOT/include/c++/v1" ' if cxx_include else "")
+            + f'-isystem "$PYRUN_TOOLCHAIN_ROOT/include/{abi_include}" '
+            + '-isystem "$PYRUN_TOOLCHAIN_ROOT/include" '
+        )
+    passthrough = (
+        f'\nif [ "${{1:-}}" = "{passthrough_arg}" ]; then\n'
+        f'  exec "$PYRUN_TOOLCHAIN_ROOT/bin/{target}" "$@"\n'
+        "fi\n"
+        if passthrough_arg
+        else ""
+    )
     resource = (
-        f'\nexec "$PYRUN_TOOLCHAIN_ROOT/bin/{target}" {argument_prefix}-resource-dir '
+        f'{passthrough}\nexec "$PYRUN_TOOLCHAIN_ROOT/bin/{target}" {argument_prefix}{target_flags}-resource-dir '
         f'"$PYRUN_TOOLCHAIN_ROOT/{resource_dir}" -isystem '
         f'"$PYRUN_TOOLCHAIN_ROOT/include" -L "$PYRUN_TOOLCHAIN_ROOT/lib" "$@"\n'
         if resource_dir
-        else f'\nexec "$PYRUN_TOOLCHAIN_ROOT/bin/{target}" {argument_prefix}"$@"\n'
+        else f'{passthrough}\nexec "$PYRUN_TOOLCHAIN_ROOT/bin/{target}" {argument_prefix}{target_flags}"$@"\n'
     )
     text = "#!/system/bin/sh\nset -eu\n: \"${PYRUN_TOOLCHAIN_ROOT:?toolchain root is not configured}\"\n" + extra + resource
     path.write_text(text, encoding="utf-8", newline="\n")
     path.chmod(0o755)
 
 
-def _create_wrappers(root: Path) -> dict[str, str]:
+def _create_wrappers(root: Path, abi: str) -> dict[str, str]:
     clang = _real_binary(root, ("clang-21", "clang"))
     clang_cpp = _real_binary(root, ("clang++-21", "clang++"))
     flang = _real_binary(root, ("flang-new-21", "flang-21", "flang-new", "flang"))
@@ -299,27 +318,50 @@ def _create_wrappers(root: Path) -> dict[str, str]:
         resolved_wrapper = wrapper.resolve() if wrapper.exists() or wrapper.is_symlink() else wrapper
         target = target.resolve()
         if resolved_wrapper == target:
+            # A symlink entry point can be removed without moving the real
+            # binary.  Keeping its original basename is important for Flang:
+            # the driver selects its frontend mode from argv[0].
+            if wrapper.is_symlink():
+                wrapper.unlink()
+                return target
             preserved = root / "bin" / f"{wrapper_name}.real"
             if not preserved.exists():
-                shutil.copy2(target, preserved)
-            if wrapper.is_symlink() or wrapper.exists():
-                wrapper.unlink()
+                shutil.move(target, preserved)
             return preserved
         return target
 
     clang = preserve_target("clang", clang)
     clang_cpp = preserve_target("clang++", clang_cpp)
     flang = preserve_target("flang", flang)
-    _write_wrapper(root / "bin" / "clang", clang.name, resource_relative, 'export PREFIX="$PYRUN_TOOLCHAIN_ROOT"\n')
+    target_triple = {
+        "arm64_v8a": "aarch64-linux-android24",
+        "x86_64": "x86_64-linux-android24",
+    }[abi]
+    _write_wrapper(
+        root / "bin" / "clang",
+        clang.name,
+        resource_relative,
+        'export PREFIX="$PYRUN_TOOLCHAIN_ROOT"\n',
+        target_triple=target_triple,
+    )
     cpp_mode = "--driver-mode=g++ " if clang_cpp == clang else ""
     _write_wrapper(
         root / "bin" / "clang++",
         clang_cpp.name,
         resource_relative,
         'export PREFIX="$PYRUN_TOOLCHAIN_ROOT"\n',
-        argument_prefix=cpp_mode,
+        argument_prefix=f"{cpp_mode}-lc++_shared ",
+        target_triple=target_triple,
+        cxx_include=True,
     )
-    _write_wrapper(root / "bin" / "flang", flang.name, resource_relative, 'export PREFIX="$PYRUN_TOOLCHAIN_ROOT"\n')
+    _write_wrapper(
+        root / "bin" / "flang",
+        flang.name,
+        resource_relative,
+        'export PREFIX="$PYRUN_TOOLCHAIN_ROOT"\n',
+        target_triple=target_triple,
+        passthrough_arg="-fc1",
+    )
     pkg_config = root / "bin" / "pkg-config"
     real_pkg = root / "bin" / "pkg-config.real"
     if pkg_config.is_symlink():
@@ -404,7 +446,7 @@ def build(abi: str, output: Path, version: str, repository: str, cache_dir: Path
         root.mkdir()
         for record in packages:
             extract_deb(download_package(record, repository, package_cache), root)
-        tools = _create_wrappers(root)
+        tools = _create_wrappers(root, abi)
         (root / "proof").mkdir()
         (root / "proof" / "hello.c").write_text("#include <stdio.h>\nint main(void) { puts(\"pyrun-c-ok\"); return 0; }\n", encoding="utf-8")
         (root / "proof" / "hello.cpp").write_text("#include <iostream>\nint main() { std::cout << \"pyrun-cpp-ok\\n\"; }\n", encoding="utf-8")
