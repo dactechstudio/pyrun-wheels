@@ -270,6 +270,7 @@ def _write_wrapper(
     target_triple: str | None = None,
     cxx_include: bool = False,
     passthrough_arg: str | None = None,
+    include_root: bool = True,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     target_flags = ""
@@ -278,8 +279,8 @@ def _write_wrapper(
         target_flags = (
             f'--target={target_triple} --sysroot="$PYRUN_TOOLCHAIN_ROOT" '
             + (f'-isystem "$PYRUN_TOOLCHAIN_ROOT/include/c++/v1" ' if cxx_include else "")
-            + f'-isystem "$PYRUN_TOOLCHAIN_ROOT/include/{abi_include}" '
-            + '-isystem "$PYRUN_TOOLCHAIN_ROOT/include" '
+            + (f'-isystem "$PYRUN_TOOLCHAIN_ROOT/include/{abi_include}" ' if include_root else "")
+            + ( '-isystem "$PYRUN_TOOLCHAIN_ROOT/include" ' if include_root else "")
         )
     passthrough = (
         f'\nif [ "${{1:-}}" = "{passthrough_arg}" ]; then\n'
@@ -290,8 +291,9 @@ def _write_wrapper(
     )
     resource = (
         f'{passthrough}\nexec "$PYRUN_TOOLCHAIN_ROOT/bin/{target}" {argument_prefix}{target_flags}-resource-dir '
-        f'"$PYRUN_TOOLCHAIN_ROOT/{resource_dir}" -isystem '
-        f'"$PYRUN_TOOLCHAIN_ROOT/include" -L "$PYRUN_TOOLCHAIN_ROOT/lib" "$@"\n'
+        f'"$PYRUN_TOOLCHAIN_ROOT/{resource_dir}" '
+        + (f'-isystem "$PYRUN_TOOLCHAIN_ROOT/include" ' if include_root else "")
+        + f'-L "$PYRUN_TOOLCHAIN_ROOT/lib" "$@"\n'
         if resource_dir
         else f'{passthrough}\nexec "$PYRUN_TOOLCHAIN_ROOT/bin/{target}" {argument_prefix}{target_flags}"$@"\n'
     )
@@ -361,6 +363,7 @@ def _create_wrappers(root: Path, abi: str) -> dict[str, str]:
         'export PREFIX="$PYRUN_TOOLCHAIN_ROOT"\n',
         target_triple=target_triple,
         passthrough_arg="-fc1",
+        include_root=False,
     )
     pkg_config = root / "bin" / "pkg-config"
     real_pkg = root / "bin" / "pkg-config.real"
