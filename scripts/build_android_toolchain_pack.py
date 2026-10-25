@@ -253,19 +253,28 @@ def extract_deb(deb: Path, root: Path) -> None:
 def _real_binary(root: Path, names: tuple[str, ...]) -> Path:
     for name in names:
         candidate = root / "bin" / name
-        if candidate.exists() and not candidate.is_symlink():
-            return candidate
+        if not candidate.exists() and not candidate.is_symlink():
+            continue
+        resolved = candidate.resolve()
+        if resolved.is_file() and resolved.is_relative_to(root.resolve() / "bin"):
+            return resolved
     raise RuntimeError(f"compiler executable missing after extraction: {names}")
 
 
-def _write_wrapper(path: Path, target: str, resource_dir: str | None = None, extra: str = "") -> None:
+def _write_wrapper(
+    path: Path,
+    target: str,
+    resource_dir: str | None = None,
+    extra: str = "",
+    argument_prefix: str = "",
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     resource = (
-        f'\nexec "$PYRUN_TOOLCHAIN_ROOT/bin/{target}" --resource-dir '
+        f'\nexec "$PYRUN_TOOLCHAIN_ROOT/bin/{target}" {argument_prefix}--resource-dir '
         f'"$PYRUN_TOOLCHAIN_ROOT/{resource_dir}" -isystem '
         f'"$PYRUN_TOOLCHAIN_ROOT/include" -L "$PYRUN_TOOLCHAIN_ROOT/lib" "$@"\n'
         if resource_dir
-        else f'\nexec "$PYRUN_TOOLCHAIN_ROOT/bin/{target}" "$@"\n'
+        else f'\nexec "$PYRUN_TOOLCHAIN_ROOT/bin/{target}" {argument_prefix}"$@"\n'
     )
     text = "#!/system/bin/sh\nset -eu\n: \"${PYRUN_TOOLCHAIN_ROOT:?toolchain root is not configured}\"\n" + extra + resource
     path.write_text(text, encoding="utf-8", newline="\n")
@@ -281,7 +290,14 @@ def _create_wrappers(root: Path) -> dict[str, str]:
         raise RuntimeError("LLVM resource directory missing from pack")
     resource_relative = resource.relative_to(root).as_posix()
     _write_wrapper(root / "bin" / "clang", clang.name, resource_relative, 'export PREFIX="$PYRUN_TOOLCHAIN_ROOT"\n')
-    _write_wrapper(root / "bin" / "clang++", clang_cpp.name, resource_relative, 'export PREFIX="$PYRUN_TOOLCHAIN_ROOT"\n')
+    cpp_mode = "--driver-mode=g++ " if clang_cpp == clang else ""
+    _write_wrapper(
+        root / "bin" / "clang++",
+        clang_cpp.name,
+        resource_relative,
+        'export PREFIX="$PYRUN_TOOLCHAIN_ROOT"\n',
+        argument_prefix=cpp_mode,
+    )
     _write_wrapper(root / "bin" / "flang", flang.name, resource_relative, 'export PREFIX="$PYRUN_TOOLCHAIN_ROOT"\n')
     pkg_config = root / "bin" / "pkg-config"
     real_pkg = root / "bin" / "pkg-config.real"
