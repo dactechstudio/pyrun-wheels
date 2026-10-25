@@ -62,12 +62,14 @@ jobs:
           - abi: arm64_v8a
             system_image: system-images;android-35;google_apis;arm64-v8a
             emulator_abi: arm64-v8a
-            emulator_accel: off
+            runner: ubuntu-24.04-arm
+            emulator_accel: auto
           - abi: x86_64
             system_image: system-images;android-35;google_apis;x86_64
             emulator_abi: x86_64
+            runner: ubuntu-24.04
             emulator_accel: auto
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out proof scripts
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -82,6 +84,25 @@ jobs:
         with:
           name: compiler-pack-${{ matrix.abi }}
           path: dist
+
+      - name: Ensure Android command-line tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${ANDROID_HOME:-}" ] && [ -x "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" ]; then
+            exit 0
+          fi
+          sdk_root="$RUNNER_TEMP/android-sdk"
+          tools_zip="$RUNNER_TEMP/commandlinetools.zip"
+          curl --fail --location --retry 3 --output "$tools_zip" \
+            https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip
+          rm -rf "$sdk_root"
+          mkdir -p "$sdk_root/cmdline-tools"
+          unzip -q "$tools_zip" -d "$RUNNER_TEMP/android-cmdline"
+          mv "$RUNNER_TEMP/android-cmdline/cmdline-tools" "$sdk_root/cmdline-tools/latest"
+          echo "ANDROID_HOME=$sdk_root" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$sdk_root" >> "$GITHUB_ENV"
+          echo "$sdk_root/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
 
       - name: Install Android emulator image
         shell: bash
