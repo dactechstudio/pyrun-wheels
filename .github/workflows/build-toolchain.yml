@@ -63,12 +63,14 @@ jobs:
             system_image: system-images;android-35;google_apis;arm64-v8a
             emulator_abi: arm64-v8a
             runner: macos-14
-            emulator_accel: off
+            emulator_accel: auto
+            force_tcg: true
           - abi: x86_64
             system_image: system-images;android-35;google_apis;x86_64
             emulator_abi: x86_64
             runner: ubuntu-24.04
             emulator_accel: auto
+            force_tcg: false
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Check out proof scripts
@@ -129,9 +131,8 @@ jobs:
         run: |
           set -euo pipefail
           emulator="${ANDROID_HOME}/emulator/emulator"
-          if [ "${{ matrix.emulator_accel }}" = "off" ]; then
-            # The Android emulator otherwise probes HVF on macOS ARM even
-            # with -accel off; this supported switch forces QEMU TCG.
+          if [ "${{ matrix.force_tcg }}" = "true" ]; then
+            # Force QEMU TCG on hosted macOS ARM where nested HVF is unavailable.
             export ANDROID_I_WANT_MY_TCG=yes
           fi
           adb start-server >/dev/null
