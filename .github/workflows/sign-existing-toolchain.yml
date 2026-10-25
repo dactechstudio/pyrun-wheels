@@ -63,7 +63,9 @@ jobs:
           set -euo pipefail
           echo "Approved physical-device proof: ${{ inputs.physical_device_model }}"
           mkdir -p signed
-          for archive in incoming/*.tar.xz; do
+          mapfile -d '' archives < <(find incoming -type f -name '*.tar.xz' -print0)
+          test "${#archives[@]}" -eq 2
+          for archive in "${archives[@]}"; do
             abi="$(basename "$archive" | sed -E 's/^pyrun-toolchain-([^-]+)-.*$/\1/')"
             root="$RUNNER_TEMP/signed-$abi"
             mkdir -p "$root"
