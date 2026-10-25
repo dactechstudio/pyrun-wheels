@@ -13,6 +13,16 @@ on:
         required: true
         type: boolean
         default: true
+      physical_device_proof:
+        description: Release after a real Android device proof recorded locally (requires wheel-release approval)
+        required: true
+        type: boolean
+        default: false
+      physical_device_model:
+        description: Model used for the real-device proof when physical_device_proof is true
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -53,7 +63,7 @@ jobs:
 
   android-proof:
     name: Android compiler proof · ${{ matrix.abi }}
-    if: ${{ inputs.run_android_proof == true }}
+    if: ${{ inputs.run_android_proof == true && inputs.physical_device_proof != true }}
     needs: build
     strategy:
       fail-fast: false
@@ -188,7 +198,9 @@ jobs:
 
   sign:
     name: Sign verified compiler packs
-    if: ${{ inputs.run_android_proof == true }}
+    # A physical-device proof is explicitly approved through the protected
+    # wheel-release environment.  Managed emulator proof remains the default.
+    if: ${{ always() && (needs.android-proof.result == 'success' || inputs.physical_device_proof == true) }}
     needs: [build, android-proof]
     runs-on: ubuntu-24.04
     environment:
@@ -218,6 +230,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [ "${{ inputs.physical_device_proof }}" = "true" ]; then
+            test -n "${{ inputs.physical_device_model }}"
+            echo "Using approved physical-device proof: ${{ inputs.physical_device_model }}"
+          fi
           test -n "$PYRUN_ED25519_PRIVATE_KEY"
           mkdir -p signed
           for archive in incoming/*.tar.xz; do

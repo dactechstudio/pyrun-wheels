@@ -17,6 +17,14 @@ pack, compiles all three programs and executes the resulting binaries. The
 signing job is gated on both proof jobs and signs each exact `manifest.json`
 with the protected `wheel-release/PYRUN_ED25519_PRIVATE_KEY` secret.
 
+When a hosted emulator cannot boot the target ABI, the same workflow supports
+an explicit `physical_device_proof=true` dispatch. Before dispatching that
+path, a real device must be connected and the exact build artifact must have
+produced `pyrun-c-ok`, `pyrun-cpp-ok` and `pyrun-fortran-ok` locally. The
+device model is supplied in `physical_device_model`; the protected
+`wheel-release` approval remains mandatory before signing. This is a release
+exception, not an emulator-proof substitute for future automated runs.
+
 `publish-toolchain-pages.yml` is a separate, manual publication step. It
 downloads only the successful signed run, verifies both signatures and every
 tool digest, then adds immutable entries to `catalog/toolchains.json` and the
@@ -24,5 +32,8 @@ tool digest, then adds immutable entries to `catalog/toolchains.json` and the
 and inner Ed25519 signature before atomically activating a pack.
 
 The workflow is intentionally not considered a completed Phase 25 proof until
-one successful run has produced both ABI artifacts and the Android proof job
-has reported `pyrun-c-ok`, `pyrun-cpp-ok` and `pyrun-fortran-ok` for each ABI.
+one successful run has produced both ABI artifacts and either the Android
+proof job or an approved physical-device proof has reported
+`pyrun-c-ok`, `pyrun-cpp-ok` and `pyrun-fortran-ok` for the released ABI. The
+other ABI must still have a build artifact and must be covered by a separate
+device/emulator proof before claiming full two-ABI support.
