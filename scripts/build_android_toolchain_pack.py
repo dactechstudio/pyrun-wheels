@@ -289,6 +289,27 @@ def _create_wrappers(root: Path) -> dict[str, str]:
     if resource is None:
         raise RuntimeError("LLVM resource directory missing from pack")
     resource_relative = resource.relative_to(root).as_posix()
+    # Termux exposes compiler entry points as symlinks (for example clang ->
+    # clang-21).  Writing a wrapper through that symlink would overwrite the
+    # real compiler binary and make the published pack recursively invoke its
+    # own wrapper.  Preserve the resolved binary before replacing the entry
+    # point with our Android-aware wrapper.
+    def preserve_target(wrapper_name: str, target: Path) -> Path:
+        wrapper = root / "bin" / wrapper_name
+        resolved_wrapper = wrapper.resolve() if wrapper.exists() or wrapper.is_symlink() else wrapper
+        target = target.resolve()
+        if resolved_wrapper == target:
+            preserved = root / "bin" / f"{wrapper_name}.real"
+            if not preserved.exists():
+                shutil.copy2(target, preserved)
+            if wrapper.is_symlink() or wrapper.exists():
+                wrapper.unlink()
+            return preserved
+        return target
+
+    clang = preserve_target("clang", clang)
+    clang_cpp = preserve_target("clang++", clang_cpp)
+    flang = preserve_target("flang", flang)
     _write_wrapper(root / "bin" / "clang", clang.name, resource_relative, 'export PREFIX="$PYRUN_TOOLCHAIN_ROOT"\n')
     cpp_mode = "--driver-mode=g++ " if clang_cpp == clang else ""
     _write_wrapper(
