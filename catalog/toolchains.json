@@ -2,26 +2,46 @@
   "latest": {
     "arm64_v8a": {
       "abi": "arm64_v8a",
-      "manifest": "../toolchains/arm64_v8a/termux-2026.10.25-r3/manifest.json",
-      "pack": "https://github.com/dactechstudio/pyrun-wheels/releases/download/termux-2026.10.25-r3/pyrun-toolchain-arm64_v8a-termux-2026.10.25-r3.tar.xz",
-      "packSha256": "cbaaaeaa5b36ef56958c8b247fac67c261afeeb237de0f8754f6648c55752fac",
-      "packSize": 207252936,
-      "releaseId": "termux-2026.10.25-r3",
-      "signature": "../toolchains/arm64_v8a/termux-2026.10.25-r3/manifest.json.sig",
-      "version": "termux-2026.10.25-r3"
+      "manifest": "../toolchains/arm64_v8a/termux-2026.10.25-compact4/manifest.json",
+      "pack": "https://github.com/dactechstudio/pyrun-wheels/releases/download/termux-2026.10.25-compact4/pyrun-toolchain-arm64_v8a-termux-2026.10.25-compact4.tar.xz",
+      "packSha256": "6c9c46203fa7c29e6895531127da8e71bd1549891b3959e18bf064cc9f6a6578",
+      "packSize": 123468664,
+      "releaseId": "termux-2026.10.25-compact4",
+      "signature": "../toolchains/arm64_v8a/termux-2026.10.25-compact4/manifest.json.sig",
+      "version": "termux-2026.10.25-compact4"
     },
     "x86_64": {
       "abi": "x86_64",
-      "manifest": "../toolchains/x86_64/termux-2026.10.25-r3/manifest.json",
-      "pack": "https://github.com/dactechstudio/pyrun-wheels/releases/download/termux-2026.10.25-r3/pyrun-toolchain-x86_64-termux-2026.10.25-r3.tar.xz",
-      "packSha256": "a23ce7c03a1a1afd8206746ea87244dc724663f7bbe647b9ceb338c597de1dac",
-      "packSize": 222679608,
-      "releaseId": "termux-2026.10.25-r3",
-      "signature": "../toolchains/x86_64/termux-2026.10.25-r3/manifest.json.sig",
-      "version": "termux-2026.10.25-r3"
+      "manifest": "../toolchains/x86_64/termux-2026.10.25-compact4/manifest.json",
+      "pack": "https://github.com/dactechstudio/pyrun-wheels/releases/download/termux-2026.10.25-compact4/pyrun-toolchain-x86_64-termux-2026.10.25-compact4.tar.xz",
+      "packSha256": "d3a8d6b9f95ab60cd7e374a597c7d95bb6a6c5344bbf600d6af85ed73842f877",
+      "packSize": 132580480,
+      "releaseId": "termux-2026.10.25-compact4",
+      "signature": "../toolchains/x86_64/termux-2026.10.25-compact4/manifest.json.sig",
+      "version": "termux-2026.10.25-compact4"
     }
   },
   "releases": [
+    {
+      "abi": "arm64_v8a",
+      "manifest": "../toolchains/arm64_v8a/termux-2026.10.25-compact4/manifest.json",
+      "pack": "https://github.com/dactechstudio/pyrun-wheels/releases/download/termux-2026.10.25-compact4/pyrun-toolchain-arm64_v8a-termux-2026.10.25-compact4.tar.xz",
+      "packSha256": "6c9c46203fa7c29e6895531127da8e71bd1549891b3959e18bf064cc9f6a6578",
+      "packSize": 123468664,
+      "releaseId": "termux-2026.10.25-compact4",
+      "signature": "../toolchains/arm64_v8a/termux-2026.10.25-compact4/manifest.json.sig",
+      "version": "termux-2026.10.25-compact4"
+    },
+    {
+      "abi": "x86_64",
+      "manifest": "../toolchains/x86_64/termux-2026.10.25-compact4/manifest.json",
+      "pack": "https://github.com/dactechstudio/pyrun-wheels/releases/download/termux-2026.10.25-compact4/pyrun-toolchain-x86_64-termux-2026.10.25-compact4.tar.xz",
+      "packSha256": "d3a8d6b9f95ab60cd7e374a597c7d95bb6a6c5344bbf600d6af85ed73842f877",
+      "packSize": 132580480,
+      "releaseId": "termux-2026.10.25-compact4",
+      "signature": "../toolchains/x86_64/termux-2026.10.25-compact4/manifest.json.sig",
+      "version": "termux-2026.10.25-compact4"
+    },
     {
       "abi": "arm64_v8a",
       "manifest": "../toolchains/arm64_v8a/termux-2026.10.25-r3/manifest.json",

@@ -1,0 +1,396 @@
+{
+  "abi": "x86_64",
+  "androidMinApi": 25,
+  "fortranTools": [
+    "flang"
+  ],
+  "installPrefix": "/data/user/0/com.dactechstudio.pythonrunner/files/toolchain",
+  "profile": "full",
+  "proof": [
+    {
+      "command": "clang proof/hello.c -o proof/hello-c",
+      "language": "c",
+      "source": "proof/hello.c"
+    },
+    {
+      "command": "clang++ proof/hello.cpp -o proof/hello-cpp",
+      "language": "c++",
+      "source": "proof/hello.cpp"
+    },
+    {
+      "command": "flang proof/hello.f90 -o proof/hello-fortran",
+      "language": "fortran",
+      "source": "proof/hello.f90"
+    }
+  ],
+  "requiredTools": [
+    "clang",
+    "clang++",
+    "ld.lld",
+    "llvm-ar",
+    "llvm-strip",
+    "make",
+    "m4",
+    "pkg-config"
+  ],
+  "schemaVersion": 1,
+  "source": {
+    "architecture": "x86_64",
+    "packages": [
+      {
+        "Architecture": "all",
+        "Filename": "pool/main/c/ca-certificates/ca-certificates_1:2026.10.20-1_all.deb",
+        "Homepage": "https://curl.se/docs/caextract.html",
+        "Package": "ca-certificates",
+        "SHA256": "ab8a7fe63293b455c02399ee125eb8a0041e430ccfdf89a5be8317522fdf9107",
+        "Version": "1:2026.10.20-1"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/c/clang/clang_21.1.8-3_x86_64.deb",
+        "Homepage": "https://clang.llvm.org/",
+        "Package": "clang",
+        "SHA256": "923616704b12bce7679b6b41b7c4a6655823fc67cc99c020ddf9ea5721ac4ee0",
+        "Version": "21.1.8-3"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/f/flang/flang_21.1.8-3_x86_64.deb",
+        "Homepage": "https://flang.llvm.org/",
+        "Package": "flang",
+        "SHA256": "32ade9e6a1ab6606dd174dd33ae08bd80f2c9776d5de1a5529ed9e8372759495",
+        "Version": "21.1.8-3"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/g/gdbm/gdbm_1.26-1_x86_64.deb",
+        "Homepage": "https://www.gnu.org.ua/software/gdbm/",
+        "Package": "gdbm",
+        "SHA256": "af6c89b403d42a98898c665fc2c48da59a7d20e6e26f651a654790661844001f",
+        "Version": "1.26-1"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/g/glib/glib_2.90.1_x86_64.deb",
+        "Homepage": "https://developer.gnome.org/glib/",
+        "Package": "glib",
+        "SHA256": "fb663e2222c3f7c7fb5c98b4694426665a719160adff0a6aec509b8285b63de4",
+        "Version": "2.90.1"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/liba/libandroid-complex-math/libandroid-complex-math_0.2_x86_64.deb",
+        "Homepage": "https://android.googlesource.com/platform/bionic/+/refs/heads/master/libm/upstream-netbsd/lib/libm/complex",
+        "Package": "libandroid-complex-math",
+        "SHA256": "790f881b0cae50ec542dc14f3b6365848a660a0630f4e226e9b20a944124d59a",
+        "Version": "0.2"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/liba/libandroid-complex-math-static/libandroid-complex-math-static_0.2_x86_64.deb",
+        "Homepage": "https://android.googlesource.com/platform/bionic/+/refs/heads/master/libm/upstream-netbsd/lib/libm/complex",
+        "Package": "libandroid-complex-math-static",
+        "SHA256": "0cc69ad15958ff7150fd942d341ab51fa54586637a4ae0cc037e4f0c54f94e43",
+        "Version": "0.2"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/liba/libandroid-glob/libandroid-glob_0.6-3_x86_64.deb",
+        "Homepage": "https://man7.org/linux/man-pages/man3/glob.3.html",
+        "Package": "libandroid-glob",
+        "SHA256": "33b5d2ce934e89d50363e7ea267cea697da937d14de9fcea78cc7271956ef86e",
+        "Version": "0.6-3"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/liba/libandroid-posix-semaphore/libandroid-posix-semaphore_0.1-4_x86_64.deb",
+        "Homepage": "https://man7.org/linux/man-pages/man7/sem_overview.7.html",
+        "Package": "libandroid-posix-semaphore",
+        "SHA256": "4bde3f8bc00fa59761544593f0606a05e4b449801f1c79038c42ce66988d0eb0",
+        "Version": "0.1-4"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/liba/libandroid-support/libandroid-support_29-1_x86_64.deb",
+        "Homepage": "https://github.com/termux/libandroid-support",
+        "Package": "libandroid-support",
+        "SHA256": "665900760c05959ec076082a0941f05bd452f301e5a70bdfa7383fd3404d44d5",
+        "Version": "29-1"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/libb/libbz2/libbz2_1.0.8-8_x86_64.deb",
+        "Homepage": "http://www.bzip.org/",
+        "Package": "libbz2",
+        "SHA256": "f6f81d38a40c1626202da1e87727e5a3e6de296b1c0eb252af8948646b164ca0",
+        "Version": "1.0.8-8"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/libc/libc++/libc++_30_x86_64.deb",
+        "Homepage": "https://libcxx.llvm.org/",
+        "Package": "libc++",
+        "SHA256": "c9bcd9a8067a19c9c0e4893a72d314a2e37d6b67ce8dd05c67b9bbacad044b4f",
+        "Version": "30"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/libc/libcompiler-rt/libcompiler-rt_21.1.8-3_x86_64.deb",
+        "Homepage": "https://clang.llvm.org/",
+        "Package": "libcompiler-rt",
+        "SHA256": "cdc37a52e2c918debd01dd834c41cd86148898ce21f99f289ee79a5f1360b42c",
+        "Version": "21.1.8-3"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/libc/libcrypt/libcrypt_0.2-6_x86_64.deb",
+        "Homepage": "http://michael.dipperstein.com/crypt/",
+        "Package": "libcrypt",
+        "SHA256": "c424f96ce977cf2e8aa44925a852fd4c6c63564490a100cc44f63b71afd943e2",
+        "Version": "0.2-6"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/libe/libexpat/libexpat_2.9.0_x86_64.deb",
+        "Homepage": "https://libexpat.github.io/",
+        "Package": "libexpat",
+        "SHA256": "4af6fa2a319696055d9b317270f6f7b54170159340e776cec53ed1ba09770293",
+        "Version": "2.9.0"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/libf/libffi/libffi_3.8.0_x86_64.deb",
+        "Homepage": "https://sourceware.org/libffi/",
+        "Package": "libffi",
+        "SHA256": "59121ca4bc5f5735d7bb603bd99548983064e8fde97d236e97122cb87d3452a3",
+        "Version": "3.8.0"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/libi/libiconv/libiconv_1.19_x86_64.deb",
+        "Homepage": "https://www.gnu.org/software/libiconv/",
+        "Package": "libiconv",
+        "SHA256": "880e9f423b448316a4951ffca3ffcd626d79538042b60ce2c3a821b9650c594c",
+        "Version": "1.19"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/libl/libllvm/libllvm_21.1.8-3_x86_64.deb",
+        "Homepage": "https://clang.llvm.org/",
+        "Package": "libllvm",
+        "SHA256": "4b3bc509e727fc41c45682795129f29922b6f931e7391b6b287bd4c14bccdd7a",
+        "Version": "21.1.8-3"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/libl/liblzma/liblzma_5.8.4_x86_64.deb",
+        "Homepage": "https://tukaani.org/xz/",
+        "Package": "liblzma",
+        "SHA256": "100ea7503a0b9ecffa45e1f168d035651f2eb7aedbebe71dd21fc0da4a84ef16",
+        "Version": "5.8.4"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/libs/libsqlite/libsqlite_3.54.1_x86_64.deb",
+        "Homepage": "https://www.sqlite.org",
+        "Package": "libsqlite",
+        "SHA256": "b064739a8f4f1a67c55b3edc444688f9973a6c9ba5a1d2d4cc277e5eed08e375",
+        "Version": "3.54.1"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/libx/libxml2/libxml2_2.15.4-1_x86_64.deb",
+        "Homepage": "https://gitlab.gnome.org/GNOME/libxml2/-/wikis/home",
+        "Package": "libxml2",
+        "SHA256": "b25b5b18185b4d9f61fc63d2d8ec11fadb5755b42e01c6afef9f5ad2abd6fb78",
+        "Version": "2.15.4-1"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/l/lld/lld_21.1.8-3_x86_64.deb",
+        "Homepage": "https://clang.llvm.org/",
+        "Package": "lld",
+        "SHA256": "970ea37e44d0b398dca785ef276bbf35a6e0993ef6700e11f15df599c06358cd",
+        "Version": "21.1.8-3"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/l/llvm/llvm_21.1.8-3_x86_64.deb",
+        "Homepage": "https://clang.llvm.org/",
+        "Package": "llvm",
+        "SHA256": "3774bb652b358fe78c03a9ce6b5e47b8bb2a54a6a18ccdab89c3faaebb357ebb",
+        "Version": "21.1.8-3"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/m/m4/m4_1.4.21_x86_64.deb",
+        "Homepage": "https://www.gnu.org/software/m4/m4.html",
+        "Package": "m4",
+        "SHA256": "70afb7fcea86d85e566a1b710a29b33625fd09a046e2445c88584007826509f6",
+        "Version": "1.4.21"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/m/make/make_4.4.1-1_x86_64.deb",
+        "Homepage": "https://www.gnu.org/software/make/",
+        "Package": "make",
+        "SHA256": "c9e19246851d1c1aec6b29ac0d5c4dc851cf01158f8b7e0593f72855180e906d",
+        "Version": "4.4.1-1"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/m/mlir/mlir_21.1.8-3_x86_64.deb",
+        "Homepage": "https://clang.llvm.org/",
+        "Package": "mlir",
+        "SHA256": "aadb4a1af168d46134000dcb0eb109b8b36f144d160298465422ed897f664cdf",
+        "Version": "21.1.8-3"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/n/ncurses/ncurses_6.6.20260307+really6.5.20250830_x86_64.deb",
+        "Homepage": "https://invisible-island.net/ncurses/",
+        "Package": "ncurses",
+        "SHA256": "3f30f53c6a41c8450d146d4d42611a44be6ba0a8de1e8bb4dc903109a5fc3ff1",
+        "Version": "6.6.20260307+really6.5.20250830"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/n/ncurses-ui-libs/ncurses-ui-libs_6.6.20260307+really6.5.20250830_x86_64.deb",
+        "Homepage": "https://invisible-island.net/ncurses/",
+        "Package": "ncurses-ui-libs",
+        "SHA256": "1193618e18f579eb86064e00648d80648eaec5da70c0a5b944ac1315d209d16e",
+        "Version": "6.6.20260307+really6.5.20250830"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/n/ndk-sysroot/ndk-sysroot_30_x86_64.deb",
+        "Homepage": "https://developer.android.com/tools/sdk/ndk/index.html",
+        "Package": "ndk-sysroot",
+        "SHA256": "a6e21596cf15b35e87d1238b8b81dc3676ec065b9cac98ffbf8e987f5e3c7e50",
+        "Version": "30"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/o/openssl/openssl_1:3.6.5_x86_64.deb",
+        "Homepage": "https://www.openssl.org/",
+        "Package": "openssl",
+        "SHA256": "540f144592d23d35672976e175ede1b5d8cf464f153f646df5d4e6dcd8491a15",
+        "Version": "1:3.6.5"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/p/pcre2/pcre2_10.49_x86_64.deb",
+        "Homepage": "https://pcre2project.github.io/pcre2/",
+        "Package": "pcre2",
+        "SHA256": "4a6f66ac12565342897ce9b5cd11ba8ce6fce1fd1a91ae679c3468d7fc2ee541",
+        "Version": "10.49"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/p/pkg-config/pkg-config_0.29.2-3_x86_64.deb",
+        "Homepage": "https://www.freedesktop.org/wiki/Software/pkg-config/",
+        "Package": "pkg-config",
+        "SHA256": "b7ae218e6f5e43b30827074db27532de982b7c051460cfcccaa0332743ae9417",
+        "Version": "0.29.2-3"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/p/python/python_3.14.8_x86_64.deb",
+        "Homepage": "https://python.org/",
+        "Package": "python",
+        "SHA256": "84f11d933bd7ec2b26b2aeaf1f2163ebfd8a9d87d27a342d80f46fbee90f1bcd",
+        "Version": "3.14.8"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/r/readline/readline_8.3.6_x86_64.deb",
+        "Homepage": "https://tiswww.case.edu/php/chet/readline/rltop.html",
+        "Package": "readline",
+        "SHA256": "e9684798d13ede05f785315f68d3ff739563db2abef0e73db4dc9b8e17ded368",
+        "Version": "8.3.6"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/r/resolv-conf/resolv-conf_1.3_x86_64.deb",
+        "Homepage": "https://man7.org/linux/man-pages/man5/resolv.conf.5.html",
+        "Package": "resolv-conf",
+        "SHA256": "0fcf8c5447bc5fbb0d411a47dc5c67d2aced861227e09052fc423220291a22c7",
+        "Version": "1.3"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/z/zlib/zlib_1.3.2_x86_64.deb",
+        "Homepage": "https://www.zlib.net/",
+        "Package": "zlib",
+        "SHA256": "c61b089dd30981452f5953b2bad4c4e7857062b2abd971f87fb0aec441bc02f4",
+        "Version": "1.3.2"
+      },
+      {
+        "Architecture": "x86_64",
+        "Filename": "pool/main/z/zstd/zstd_1.5.7-1_x86_64.deb",
+        "Homepage": "https://github.com/facebook/zstd",
+        "Package": "zstd",
+        "SHA256": "a76ba6c3d8742819bf4fff7780eb2e022269412700fc8f4471f530cc0d81833f",
+        "Version": "1.5.7-1"
+      }
+    ],
+    "repository": "https://packages.termux.dev/apt/termux-main"
+  },
+  "tools": [
+    {
+      "executable": true,
+      "name": "clang",
+      "path": "bin/clang",
+      "sha256": "0bd0fc41d42752a10d66942a050b690a9fba15d45e6114d4520c8e5245aefcee"
+    },
+    {
+      "executable": true,
+      "name": "clang++",
+      "path": "bin/clang++",
+      "sha256": "4ac51fdc229fd4235d85ec4050c5f80a8027b1651cf41b48f5542e61f34908de"
+    },
+    {
+      "executable": true,
+      "name": "flang",
+      "path": "bin/flang",
+      "sha256": "9f7ded0894cb5f1d93fa94713273874f89b1e641dab6a20a10ba3afbe351b4f8"
+    },
+    {
+      "executable": true,
+      "name": "ld.lld",
+      "path": "bin/ld.lld",
+      "sha256": "98817a32aec4911d2ab528d704cb7a3fb27aff9a4a60145b8972179f3f0c6b34"
+    },
+    {
+      "executable": true,
+      "name": "llvm-ar",
+      "path": "bin/llvm-ar",
+      "sha256": "0f21a8980c7d561f2503dda115541fd5acfa16833244876a3e268ebfeb1a7ad4"
+    },
+    {
+      "executable": true,
+      "name": "llvm-strip",
+      "path": "bin/llvm-strip",
+      "sha256": "8b8c0aeb42856c4db3c9c9b789a8d30b4b1ec16943819fbfc787f768ae5ef62a"
+    },
+    {
+      "executable": true,
+      "name": "m4",
+      "path": "bin/m4",
+      "sha256": "a63b1df0af142dea40e11776333d05d25d88b599b13f8afa24fb46f1126693c7"
+    },
+    {
+      "executable": true,
+      "name": "make",
+      "path": "bin/make",
+      "sha256": "b1c5cdc1df861e3f674a15f89ebcad36e53c59bf6dfefa31449b67caa343b582"
+    },
+    {
+      "executable": true,
+      "name": "pkg-config",
+      "path": "bin/pkg-config",
+      "sha256": "7529577557834aba7b907e24f6cb5a0890641145e37cd496ba993f086c4c5344"
+    }
+  ],
+  "version": "termux-2026.10.25-compact4"
+}
