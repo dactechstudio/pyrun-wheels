@@ -1,0 +1,106 @@
+name: Publish signed Android compiler packs to GitHub Pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      signing_workflow_run_id:
+        description: Successful Build and prove signed Android compiler packs run ID
+        required: true
+        type: string
+      release_id:
+        description: Immutable Pages release identifier
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      actions: read
+      contents: write
+      id-token: write
+      pages: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN_ID: ${{ inputs.signing_workflow_run_id }}
+      RELEASE_ID: ${{ inputs.release_id }}
+    steps:
+      - name: Check out release policy and verification key
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          ref: main
+
+      - name: Set up CPython
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.13.17"
+
+      - name: Install pinned release tooling
+        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
+
+      - name: Validate the successful signed build run
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]{1,20}$ ]]
+          [[ "$RELEASE_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ && "$RELEASE_ID" != *..* ]]
+          metadata="$(gh run view "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --json workflowName,headBranch,event,status,conclusion)"
+          printf '%s' "$metadata" | jq -e '
+            .workflowName == "Build and prove signed Android compiler packs" and
+            .headBranch == "main" and .event == "workflow_dispatch" and
+            .status == "completed" and .conclusion == "success"
+          ' >/dev/null
+
+      - name: Download the exact signed compiler packs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p incoming
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --pattern 'signed-compiler-packs-*' --dir incoming
+          test "$(find incoming -type f -name '*.tar.xz' | wc -l)" -eq 2
+
+      - name: Add verified compiler packs to gh-pages history
+        shell: bash
+        run: |
+          set -euo pipefail
+          state_dir="$RUNNER_TEMP/pyrun-pages-state"
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            git fetch --no-tags origin gh-pages
+            git worktree add --detach "$state_dir" FETCH_HEAD
+          else
+            empty_tree="$(git hash-object -t tree -w --stdin </dev/null)"
+            initial_commit="$(printf 'Initialize PyRun Pages history\n' | git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit-tree "$empty_tree")"
+            git branch gh-pages "$initial_commit"
+            git worktree add "$state_dir" gh-pages
+          fi
+          python scripts/prepare_toolchain_site.py \
+            --site "$state_dir" \
+            --release-id "$RELEASE_ID" \
+            --public-key keys/pyrun-ed25519-public.pem \
+            --arm64-pack "$(find incoming -type f -name '*arm64_v8a*.tar.xz' -print -quit)" \
+            --x86-64-pack "$(find incoming -type f -name '*x86_64*.tar.xz' -print -quit)"
+          git -C "$state_dir" config user.name "github-actions[bot]"
+          git -C "$state_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$state_dir" add --all
+          if ! git -C "$state_dir" diff --cached --quiet; then
+            git -C "$state_dir" commit -m "Publish signed compiler packs $RELEASE_ID"
+            git -C "$state_dir" push origin HEAD:gh-pages
+          fi
+          mkdir -p dist/pages-site
+          rsync -a --exclude=.git "$state_dir/" dist/pages-site/
+
+      - name: Upload cumulative Pages site
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: dist/pages-site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
