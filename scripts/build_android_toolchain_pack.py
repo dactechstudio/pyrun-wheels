@@ -441,7 +441,14 @@ def _prune_runtime(root: Path, abi: str) -> None:
             _remove_path(child)
             continue
         if child.is_file() and child.suffix == ".a":
-            keep = child.name in {"libflang_rt.runtime.a", "libc++_static.a"}
+            # Required by the Android clang driver for the default link line.
+            # Keep this small runtime archive while pruning optional
+            # sanitizer/compiler build payload.
+            keep = child.name in {
+                "libunwind.a",
+                "libflang_rt.runtime.a",
+                "libc++_static.a",
+            }
             keep = keep or child.name.startswith("libclang_rt.builtins-")
             if not keep:
                 _remove_path(child)
