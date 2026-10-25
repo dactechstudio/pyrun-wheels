@@ -395,6 +395,68 @@ def _create_wrappers(root: Path, abi: str) -> dict[str, str]:
     return tools
 
 
+def _remove_path(path: Path) -> None:
+    if path.is_symlink() or path.is_file():
+        path.unlink()
+    elif path.is_dir():
+        shutil.rmtree(path)
+
+
+def _prune_runtime(root: Path, abi: str) -> None:
+    """Remove Termux build-time payload that the in-app compilers never use.
+
+    LLVM packages contain their own developer toolchain: optimizers, language
+    servers, MLIR/Flang static libraries, sanitizer runtimes and generator
+    headers. None is needed to compile a user C/C++/Fortran source with the
+    three exposed drivers. Keeping the pruning policy here makes the archive
+    deterministic and leaves the package provenance in ``metadata`` intact.
+    """
+    bin_dir = root / "bin"
+    keep_bin = {
+        "clang", "clang-21", "clang++", "clang++-21",
+        "flang", "flang-21", "flang-new", "flang-new-21",
+        "lld", "ld.lld", "llvm-ar", "llvm-strip", "llvm-objcopy",
+        "make", "m4", "pkg-config",
+    }
+    for child in bin_dir.iterdir():
+        if child.name not in keep_bin:
+            _remove_path(child)
+
+    include_dir = root / "include"
+    for name in ("clang", "clang-c", "clang-tidy", "flang", "llvm", "llvm-c", "mlir", "mlir-c", "python3.14"):
+        candidate = include_dir / name
+        if candidate.exists() or candidate.is_symlink():
+            _remove_path(candidate)
+    target_include = {
+        "arm64_v8a": "aarch64-linux-android",
+        "x86_64": "x86_64-linux-android",
+    }[abi]
+    for child in include_dir.iterdir():
+        if child.name.endswith("-linux-android") and child.name != target_include:
+            _remove_path(child)
+
+    lib_dir = root / "lib"
+    for child in list(lib_dir.iterdir()):
+        if child.name in {"cmake", "libear", "libscanbuild", "python3.14"}:
+            _remove_path(child)
+            continue
+        if child.is_file() and child.suffix == ".a":
+            keep = child.name in {"libflang_rt.runtime.a", "libc++_static.a"}
+            keep = keep or child.name.startswith("libclang_rt.builtins-")
+            if not keep:
+                _remove_path(child)
+
+    share_dir = root / "share"
+    for child in list(share_dir.iterdir()):
+        if child.name != "pkgconfig":
+            _remove_path(child)
+
+    # Pruning must never leave a broken symlink in the published archive.
+    for child in root.rglob("*"):
+        if child.is_symlink() and not child.exists():
+            child.unlink()
+
+
 def _manifest(root: Path, abi: str, version: str, packages: list[dict[str, str]], tools: dict[str, str]) -> dict:
     records = []
     for name, relative in sorted(tools.items()):
@@ -447,6 +509,7 @@ def build(abi: str, output: Path, version: str, repository: str, cache_dir: Path
         root.mkdir()
         for record in packages:
             extract_deb(download_package(record, repository, package_cache), root)
+        _prune_runtime(root, abi)
         tools = _create_wrappers(root, abi)
         (root / "proof").mkdir()
         (root / "proof" / "hello.c").write_text("#include <stdio.h>\nint main(void) { puts(\"pyrun-c-ok\"); return 0; }\n", encoding="utf-8")
