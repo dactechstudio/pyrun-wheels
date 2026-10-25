@@ -1,0 +1,47 @@
+{
+  "latest": {
+    "arm64_v8a": {
+      "abi": "arm64_v8a",
+      "manifest": "../toolchains/arm64_v8a/termux-2026.10.25-r3/manifest.json",
+      "pack": "https://github.com/dactechstudio/pyrun-wheels/releases/download/termux-2026.10.25-r3/pyrun-toolchain-arm64_v8a-termux-2026.10.25-r3.tar.xz",
+      "packSha256": "cbaaaeaa5b36ef56958c8b247fac67c261afeeb237de0f8754f6648c55752fac",
+      "packSize": 207252936,
+      "releaseId": "termux-2026.10.25-r3",
+      "signature": "../toolchains/arm64_v8a/termux-2026.10.25-r3/manifest.json.sig",
+      "version": "termux-2026.10.25-r3"
+    },
+    "x86_64": {
+      "abi": "x86_64",
+      "manifest": "../toolchains/x86_64/termux-2026.10.25-r3/manifest.json",
+      "pack": "https://github.com/dactechstudio/pyrun-wheels/releases/download/termux-2026.10.25-r3/pyrun-toolchain-x86_64-termux-2026.10.25-r3.tar.xz",
+      "packSha256": "a23ce7c03a1a1afd8206746ea87244dc724663f7bbe647b9ceb338c597de1dac",
+      "packSize": 222679608,
+      "releaseId": "termux-2026.10.25-r3",
+      "signature": "../toolchains/x86_64/termux-2026.10.25-r3/manifest.json.sig",
+      "version": "termux-2026.10.25-r3"
+    }
+  },
+  "releases": [
+    {
+      "abi": "arm64_v8a",
+      "manifest": "../toolchains/arm64_v8a/termux-2026.10.25-r3/manifest.json",
+      "pack": "https://github.com/dactechstudio/pyrun-wheels/releases/download/termux-2026.10.25-r3/pyrun-toolchain-arm64_v8a-termux-2026.10.25-r3.tar.xz",
+      "packSha256": "cbaaaeaa5b36ef56958c8b247fac67c261afeeb237de0f8754f6648c55752fac",
+      "packSize": 207252936,
+      "releaseId": "termux-2026.10.25-r3",
+      "signature": "../toolchains/arm64_v8a/termux-2026.10.25-r3/manifest.json.sig",
+      "version": "termux-2026.10.25-r3"
+    },
+    {
+      "abi": "x86_64",
+      "manifest": "../toolchains/x86_64/termux-2026.10.25-r3/manifest.json",
+      "pack": "https://github.com/dactechstudio/pyrun-wheels/releases/download/termux-2026.10.25-r3/pyrun-toolchain-x86_64-termux-2026.10.25-r3.tar.xz",
+      "packSha256": "a23ce7c03a1a1afd8206746ea87244dc724663f7bbe647b9ceb338c597de1dac",
+      "packSize": 222679608,
+      "releaseId": "termux-2026.10.25-r3",
+      "signature": "../toolchains/x86_64/termux-2026.10.25-r3/manifest.json.sig",
+      "version": "termux-2026.10.25-r3"
+    }
+  ],
+  "schemaVersion": 1
+}
