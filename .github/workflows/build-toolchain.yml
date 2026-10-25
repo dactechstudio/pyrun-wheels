@@ -129,6 +129,11 @@ jobs:
         run: |
           set -euo pipefail
           emulator="${ANDROID_HOME}/emulator/emulator"
+          if [ "${{ matrix.emulator_accel }}" = "off" ]; then
+            # The Android emulator otherwise probes HVF on macOS ARM even
+            # with -accel off; this supported switch forces QEMU TCG.
+            export ANDROID_I_WANT_MY_TCG=yes
+          fi
           adb start-server >/dev/null
           "$emulator" -avd pyrun-${{ matrix.abi }} -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel "${{ matrix.emulator_accel }}" >"$RUNNER_TEMP/emulator.log" 2>&1 &
           echo $! >"$RUNNER_TEMP/emulator.pid"
