@@ -86,13 +86,14 @@ jobs:
         run: |
           set -euo pipefail
           sdkmanager="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          avdmanager="${ANDROID_HOME}/cmdline-tools/latest/bin/avdmanager"
           set +e
           yes | "$sdkmanager" --licenses >/dev/null
           sdk_status="${PIPESTATUS[1]}"
           set -e
           test "$sdk_status" -eq 0
           "$sdkmanager" --install "platform-tools" "emulator" "${{ matrix.system_image }}"
-          echo "no" | avdmanager create avd --force --name pyrun-${{ matrix.abi }} --package "${{ matrix.system_image }}" --device pixel_2
+          echo "no" | "$avdmanager" create avd --force --name pyrun-${{ matrix.abi }} --package "${{ matrix.system_image }}" --device pixel_2
 
       - name: Boot Android emulator
         shell: bash
