@@ -270,7 +270,7 @@ def _write_wrapper(
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     resource = (
-        f'\nexec "$PYRUN_TOOLCHAIN_ROOT/bin/{target}" {argument_prefix}--resource-dir '
+        f'\nexec "$PYRUN_TOOLCHAIN_ROOT/bin/{target}" {argument_prefix}-resource-dir '
         f'"$PYRUN_TOOLCHAIN_ROOT/{resource_dir}" -isystem '
         f'"$PYRUN_TOOLCHAIN_ROOT/include" -L "$PYRUN_TOOLCHAIN_ROOT/lib" "$@"\n'
         if resource_dir
