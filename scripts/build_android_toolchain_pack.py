@@ -441,17 +441,12 @@ def _prune_runtime(root: Path, abi: str) -> None:
             _remove_path(child)
             continue
         if child.is_file() and child.suffix == ".a":
-            # Required by the Android clang driver for the default link line.
-            # Keep this small runtime archive while pruning optional
-            # sanitizer/compiler build payload.
-            keep = child.name in {
-                "libunwind.a",
-                "libflang_rt.runtime.a",
-                "libc++_static.a",
-            }
-            keep = keep or child.name.startswith("libclang_rt.builtins-")
-            if not keep:
-                _remove_path(child)
+            # Direct static archives under ``lib/`` are runtime inputs for
+            # the Android clang/flang link lines (for example libunwind and
+            # libandroid-complex-math). Keep this small top-level set; the
+            # much larger optional sanitizer archives remain outside it and
+            # are pruned by the package selection above.
+            continue
 
     share_dir = root / "share"
     for child in list(share_dir.iterdir()):
