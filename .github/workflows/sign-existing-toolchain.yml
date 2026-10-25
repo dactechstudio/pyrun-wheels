@@ -45,6 +45,9 @@ jobs:
         with:
           python-version: "3.13.17"
 
+      - name: Install pinned release tooling
+        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
+
       - name: Download exact artifacts from the source build run
         shell: bash
         run: |
