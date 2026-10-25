@@ -81,7 +81,7 @@ jobs:
             git branch gh-pages "$initial_commit"
             git worktree add "$state_dir" gh-pages
           fi
-          python scripts/prepare_toolchain_site.py \
+          PYTHONPATH="$GITHUB_WORKSPACE" python scripts/prepare_toolchain_site.py \
             --site "$state_dir" \
             --release-id "$RELEASE_ID" \
             --public-key keys/pyrun-ed25519-public.pem \
