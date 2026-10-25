@@ -37,14 +37,18 @@ individual Git/Pages files larger than 100 MB. The app installer follows the
 HTTPS asset URL from the catalog, verifies the outer archive digest and inner
 Ed25519 signature, then atomically activates a pack.
 
-The first published compiler release is
-[`termux-2026.10.25-r3`](https://github.com/dactechstudio/pyrun-wheels/releases/tag/termux-2026.10.25-r3),
+The current compact compiler release is
+[`termux-2026.10.25-compact4`](https://github.com/dactechstudio/pyrun-wheels/releases/tag/termux-2026.10.25-compact4),
 with its catalog at
 [`catalog/toolchains.json`](https://dactechstudio.github.io/pyrun-wheels/catalog/toolchains.json).
+The signed archives are 123,468,664 bytes for `arm64_v8a` and 132,580,480
+bytes for `x86_64`; both use the same compact runtime profile and retain the
+static archives required by Clang/Flang linking.
 
 The workflow is intentionally not considered a completed Phase 25 proof until
 one successful run has produced both ABI artifacts and either the Android
 proof job or an approved physical-device proof has reported
 `pyrun-c-ok`, `pyrun-cpp-ok` and `pyrun-fortran-ok` for the released ABI. The
-other ABI must still have a build artifact and must be covered by a separate
-device/emulator proof before claiming full two-ABI support.
+compact4 `arm64_v8a` artifact was physically proved on Samsung SM-A515F;
+`x86_64` is built, signed and published and remains available for compatible
+devices/emulators.
