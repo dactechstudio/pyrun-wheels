@@ -21,6 +21,26 @@ from verify_qt_runtime_aar import _verify_scientific_bundle  # noqa: E402
 
 
 class QtScientificTests(unittest.TestCase):
+    def test_runner_starts_qapplication_before_selecting_qtagg(self):
+        runner = (TOOLS / "qt_runner" / "main.py").read_text(encoding="utf-8")
+        configure = runner.split("def _configure_qt", 1)[1].split(
+            "def _force_qtagg_backend", 1
+        )[0]
+        backend = runner.split("def _force_qtagg_backend", 1)[1].split(
+            "def main", 1
+        )[0]
+        self.assertIn("QCoreApplication.instance()", runner)
+        self.assertIn("QApplication(argv)", runner)
+        self.assertNotIn('os.environ["DISPLAY"]', configure)
+        self.assertLess(
+            backend.index("_ensure_qt_application()"),
+            backend.index("import matplotlib"),
+        )
+        self.assertLess(
+            backend.index("import matplotlib"),
+            backend.index('matplotlib.use("QtAgg", force=True)'),
+        )
+
     def test_pinned_deployer_patch_is_fail_closed(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "buildozer.py"

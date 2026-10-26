@@ -263,12 +263,15 @@ def verify(path: Path, readelf: str, runner_path: Path, require_scientific: bool
     bundled_runners = [
         payload for name, payload in private_files.items() if PurePath(name).name == "main.py"
     ]
-    expected_runner = runner_path.read_bytes()
+    expected_runner = runner_path.read_bytes().replace(b"\r\n", b"\n")
     if (
         b'os.environ["MPLBACKEND"] = "QtAgg"' not in expected_runner
+        or b'def _ensure_qt_application()' not in expected_runner
+        or b"    _ensure_qt_application()\n    import matplotlib" not in expected_runner
         or b'matplotlib.use("QtAgg", force=True)' not in expected_runner
+        or b'os.environ["DISPLAY"] = ":0"' in expected_runner
     ):
-        raise ValueError("PyRun Qt entry point must force the interactive QtAgg backend")
+        raise ValueError("PyRun Qt entry point must start QApplication before forcing QtAgg")
     if len(bundled_runners) != 1 or bundled_runners[0] != expected_runner:
         raise ValueError("Qt runtime does not contain the reviewed PyRun Qt entry point")
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
