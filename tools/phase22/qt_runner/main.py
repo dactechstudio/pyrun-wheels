@@ -156,6 +156,20 @@ def _configure_qt(project: Path) -> None:
     os.chdir(project)
 
 
+def _force_qtagg_backend(source_bytes: bytes) -> None:
+    """Select QtAgg before user imports pyplot, even if the image default is Agg."""
+    if b"matplotlib" not in source_bytes and b"pylab" not in source_bytes:
+        return
+    import matplotlib
+
+    try:
+        matplotlib.use("QtAgg", force=True)
+    except Exception as error:
+        raise RuntimeError("PyRun could not activate Matplotlib's QtAgg backend") from error
+    if str(matplotlib.get_backend()).casefold() != "qtagg":
+        raise RuntimeError("PyRun failed to select Matplotlib's QtAgg backend")
+
+
 def main() -> int:
     private = os.environ.get("ANDROID_PRIVATE")
     if not private:
@@ -180,9 +194,10 @@ def main() -> int:
             raise ValueError(failure)
         stdout_writer = _BoundedTextWriter(result_dir / "stdout.txt", MAX_OUTPUT_BYTES)
         stderr_writer = _BoundedTextWriter(result_dir / "stderr.txt", MAX_OUTPUT_BYTES)
-        _configure_qt(source.parent)
         failure = "script_error"
         code = compile(source_bytes, str(source), "exec")
+        _configure_qt(source.parent)
+        _force_qtagg_backend(source_bytes)
         previous_argv = sys.argv
         sys.argv = [str(source)]
         with contextlib.redirect_stdout(stdout_writer), contextlib.redirect_stderr(stderr_writer):
