@@ -170,8 +170,11 @@ jobs:
         run: |
           set -euo pipefail
           DEPLOYER="$(python - <<'PY'
-          from PySide6.scripts.deploy_lib.android import buildozer
-          print(buildozer.__file__)
+          from importlib.metadata import distribution
+          path = distribution("PySide6").locate_file("PySide6/scripts/deploy_lib/android/buildozer.py")
+          if not path.is_file():
+              raise SystemExit(f"PySide6 Android deployer is missing: {path}")
+          print(path)
           PY
           )"
           python tools/phase22/enable_qt_scientific_requirements.py --deployer "$DEPLOYER"
