@@ -146,9 +146,28 @@ def _start_stop_monitor(result_dir: Path, run_id: str) -> None:
     threading.Thread(target=monitor, name="pyrun-qt-stop", daemon=True).start()
 
 
+_QT_APPLICATION: object | None = None
+
+
+def _ensure_qt_application() -> None:
+    """Create the Widgets application before Matplotlib checks for a GUI loop."""
+    global _QT_APPLICATION
+    from PySide6.QtCore import QCoreApplication
+    from PySide6.QtWidgets import QApplication
+
+    application = QCoreApplication.instance()
+    if application is None:
+        argv = [sys.argv[0]] if sys.argv and sys.argv[0] else ["PyRun"]
+        application = QApplication(argv)
+    elif not isinstance(application, QApplication):
+        raise RuntimeError(
+            "PyRun QtAgg requires a QApplication, but another Qt application is active"
+        )
+    _QT_APPLICATION = application
+
+
 def _configure_qt(project: Path) -> None:
     os.environ["QT_API"] = "PySide6"
-    os.environ["DISPLAY"] = ":0"
     os.environ["MPLBACKEND"] = "QtAgg"
     os.environ.setdefault("QT_QPA_PLATFORM", "android")
     if str(project) not in sys.path:
@@ -157,9 +176,10 @@ def _configure_qt(project: Path) -> None:
 
 
 def _force_qtagg_backend(source_bytes: bytes) -> None:
-    """Select QtAgg before user imports pyplot, even if the image default is Agg."""
+    """Start Qt before selecting QtAgg, even if the image default is Agg."""
     if b"matplotlib" not in source_bytes and b"pylab" not in source_bytes:
         return
+    _ensure_qt_application()
     import matplotlib
 
     try:
