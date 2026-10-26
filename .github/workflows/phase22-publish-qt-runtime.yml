@@ -1,0 +1,144 @@
+name: Phase 22 publish signed Qt runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Successful Phase 22 Qt runtime workflow run ID
+        required: true
+        type: string
+      release_id:
+        description: Immutable release ID (letters, numbers, dot, underscore, hyphen)
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: wheel-release
+    steps:
+      - name: Check out PyRun
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Validate immutable identifiers
+        shell: bash
+        env:
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          RELEASE_ID: ${{ inputs.release_id }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$RELEASE_ID" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]]
+          [[ "$RELEASE_ID" != *..* ]]
+
+      - name: Resolve and check out the source workflow revision
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          set -euo pipefail
+          RUN_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}")"
+          test "$(jq -r .conclusion <<<"$RUN_JSON")" = "success"
+          test "$(jq -r .event <<<"$RUN_JSON")" = "workflow_dispatch"
+          test "$(jq -r .name <<<"$RUN_JSON")" = "Phase 22 build universal Qt Android runtime"
+          test "$(jq -r .head_branch <<<"$RUN_JSON")" = "main"
+          SOURCE_REVISION="$(jq -r .head_sha <<<"$RUN_JSON")"
+          [[ "$SOURCE_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          git checkout --detach "$SOURCE_REVISION"
+          echo "SOURCE_REVISION=$SOURCE_REVISION" >> "$GITHUB_ENV"
+
+      - name: Download the verified universal runtime
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: phase22-qt-scientific-6.12.0-universal
+          path: source-runtime
+          run-id: ${{ inputs.source_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Verify artifact checksum from the build workflow
+        working-directory: source-runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum --check pyrun-qt-runtime-6.12.0-universal.aar.sha256
+
+      - name: Recheck both ABI scientific runtimes before signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/phase22/verify_qt_runtime_aar.py \
+            --aar source-runtime/pyrun-qt-runtime-6.12.0-universal.aar \
+            --readelf /usr/bin/readelf \
+            --runner tools/phase22/qt_runner/main.py \
+            --require-scientific
+
+      - name: Install the signing implementation
+        run: python -m pip install "cryptography==46.0.3"
+
+      - name: Materialize the protected Ed25519 key
+        shell: bash
+        env:
+          SIGNING_KEY: ${{ secrets.PYRUN_ED25519_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$SIGNING_KEY"
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          value = os.environ["SIGNING_KEY"].strip()
+          if not value.startswith("-----BEGIN PRIVATE KEY-----") or not value.endswith("-----END PRIVATE KEY-----"):
+              raise SystemExit("PYRUN_ED25519_PRIVATE_KEY is not a complete PEM private key")
+          Path("qt-runtime-signing-key.pem").write_text(value + "\n", encoding="ascii")
+          PY
+          chmod 600 qt-runtime-signing-key.pem
+
+      - name: Sign the exact Qt runtime manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/phase22/sign_qt_runtime_release.py \
+            --aar source-runtime/pyrun-qt-runtime-6.12.0-universal.aar \
+            --private-key qt-runtime-signing-key.pem \
+            --public-key keys/pyrun-ed25519-public.pem \
+            --release-id "${{ inputs.release_id }}" \
+            --repository "${{ github.repository }}" \
+            --revision "$SOURCE_REVISION" \
+            --run-id "${{ inputs.source_run_id }}" \
+            --output signed-runtime
+
+      - name: Publish an immutable GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "${{ inputs.release_id }}" >/dev/null 2>&1; then
+            echo "Release ID already exists; refusing to replace signed native runtime" >&2
+            exit 1
+          fi
+          gh release create "${{ inputs.release_id }}" \
+            signed-runtime/pyrun-qt-runtime-6.12.0-universal.aar \
+            signed-runtime/pyrun-qt-runtime-6.12.0-universal.aar.sha256 \
+            signed-runtime/manifest.json \
+            signed-runtime/manifest.json.sig \
+            --title "PyRun Qt runtime ${{ inputs.release_id }}" \
+            --notes "Signed PyRun Qt 6.12.0 / CPython 3.14 scientific runtime for arm64-v8a and x86_64. Source workflow run: ${{ inputs.source_run_id }}."
+
+      - name: Remove the materialized private key
+        if: always()
+        shell: bash
+        run: rm -f qt-runtime-signing-key.pem
