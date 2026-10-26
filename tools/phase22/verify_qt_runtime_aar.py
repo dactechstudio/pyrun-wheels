@@ -119,16 +119,27 @@ def _verify_alignment(readelf: str, path: Path, abi: str) -> None:
 def _verify_scientific_bundle(members: dict[str, bytes], abi: str) -> None:
     bundle_name = f"jni/{abi}/libpybundle.so"
     with tarfile.open(fileobj=io.BytesIO(members[bundle_name]), mode="r:gz") as archive:
-        bundle_files = {entry.name for entry in archive if entry.isfile()}
+        bundle_names = {entry.name for entry in archive if entry.isfile()}
+    bundle_parts = {PurePath(name).parts for name in bundle_names}
     for package in ("numpy", "matplotlib"):
-        if not any(name.endswith(f"/site-packages/{package}/__init__.py") for name in bundle_files):
+        if not any(
+            len(parts) >= 2
+            and parts[-2:] == (package, "__init__.py")
+            and ("site-packages" in parts[:-2] or len(parts) == 2)
+            for parts in bundle_parts
+        ):
             raise ValueError(f"Qt scientific runtime is missing {package} for {abi}")
-    if not any(name.endswith("/site-packages/matplotlib/backends/backend_qtagg.py") for name in bundle_files):
+    if not any(
+        len(parts) >= 3
+        and parts[-3:] == ("matplotlib", "backends", "backend_qtagg.py")
+        and ("site-packages" in parts[:-3] or len(parts) == 3)
+        for parts in bundle_parts
+    ):
         raise ValueError(f"Qt scientific runtime is missing QtAgg for {abi}")
     native_names = {
         name for name in members if name.startswith(f"jni/{abi}/") and name.endswith(".so")
     }
-    combined_names = native_names | bundle_files
+    combined_names = native_names | bundle_names
     for native_fragment in ("multiarray_umath", "ft2font"):
         if not any(native_fragment in name and name.endswith(".so") for name in combined_names):
             raise ValueError(f"Qt scientific runtime is missing {native_fragment} for {abi}")
