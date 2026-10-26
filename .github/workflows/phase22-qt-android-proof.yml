@@ -1,0 +1,300 @@
+name: Phase 22 build universal Qt Android runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      scientific:
+        description: Build NumPy and Matplotlib into the Qt Python 3.14 runtime (experimental proof)
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  QT_VERSION: 6.12.0
+  PYSIDE_SOURCE_REVISION: 6aefae25747a8d860d201f3ab2b2e199b9e8e006
+  ANDROID_NDK_VERSION: 28.2.13676358
+  ANDROID_API: '35'
+
+jobs:
+  build-qt-runtime:
+    name: Rebuild Qt runtime (${{ matrix.p4a_arch }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: arm64-v8a
+            p4a_arch: aarch64
+            qt_arch: android_arm64_v8a
+          - abi: x86_64
+            p4a_arch: x86_64
+            qt_arch: android_x86_64
+
+    steps:
+      - name: Check out PyRun
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Check out the pinned Qt for Python source
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          repository: qtproject/pyside-pyside-setup
+          ref: ${{ env.PYSIDE_SOURCE_REVISION }}
+          path: pyside-setup
+
+      - name: Set up Java
+        uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
+        with:
+          distribution: temurin
+          # python-for-android's pinned release accepts JDK 17 only.
+          java-version: '17'
+
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+        with:
+          cmdline-tools-version: 12266719
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: true
+          packages: platform-tools
+
+      - name: Install native build prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            autoconf automake build-essential cmake git libffi-dev libltdl-dev \
+            clang libclang-dev llvm-dev libncurses-dev libssl-dev libtool \
+            ninja-build patchelf pkg-config \
+            unzip zip zlib1g-dev
+          # sdkmanager exits after the last license and closes the pipe while
+          # `yes` is still writing. Inspect sdkmanager's status, not yes's
+          # expected SIGPIPE status.
+          set +o pipefail
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager_status=${PIPESTATUS[1]}
+          set -o pipefail
+          test "$sdkmanager_status" -eq 0
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-${ANDROID_API}" \
+            "build-tools;${ANDROID_API}.0.0" \
+            "ndk;${ANDROID_NDK_VERSION}"
+
+      - name: Install pinned Python build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install \
+            "aqtinstall==3.3.0" \
+            "build==1.3.0" \
+            "packaging==25.0" \
+            "wheel==0.46.1"
+          python -m pip install -r pyside-setup/requirements.txt
+          python -m pip install -r pyside-setup/tools/cross_compile_android/requirements.txt
+          python -m pip install -r pyside-setup/sources/pyside-tools/requirements-android.txt
+          python -m pip install "PySide6==${QT_VERSION}"
+
+      - name: Install reviewed Qt host and Android SDKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m aqt install-qt linux desktop "${QT_VERSION}" linux_gcc_64 \
+            -m qtcharts qtmultimedia qtshadertools \
+            --outputdir "$GITHUB_WORKSPACE/Qt"
+          python -m aqt install-qt linux android "${QT_VERSION}" "${{ matrix.qt_arch }}" \
+            -m qtcharts qtmultimedia qtshadertools \
+            --outputdir "$GITHUB_WORKSPACE/Qt"
+          test -x "$GITHUB_WORKSPACE/Qt/${QT_VERSION}/gcc_64/bin/qtpaths"
+          test -d "$GITHUB_WORKSPACE/Qt/${QT_VERSION}/${{ matrix.qt_arch }}"
+
+      - name: Enforce 16 KiB page-compatible linker flags
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/phase22/patch_qt_for_python_16kb.py --source pyside-setup
+          python tools/phase22/patch_pyside_qt_host_path.py --source pyside-setup
+          grep -F -- '-Wl,-z,max-page-size=16384' \
+            pyside-setup/tools/cross_compile_android/templates/toolchain_default.tmpl.cmake
+
+      - name: Cross-build PySide6 and Shiboken6 Android wheels
+        working-directory: pyside-setup
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PYRUN_QT_HOST_PATH="$GITHUB_WORKSPACE/Qt/${QT_VERSION}/gcc_64"
+          test -f "$PYRUN_QT_HOST_PATH/lib/cmake/Qt6/Qt6Config.cmake"
+          python tools/cross_compile_android/main.py \
+            --plat-name "${{ matrix.p4a_arch }}" \
+            --qt-install-path "$GITHUB_WORKSPACE/Qt/${QT_VERSION}" \
+            --api-level "${ANDROID_API}" \
+            --ndk-path "$ANDROID_HOME/ndk/${ANDROID_NDK_VERSION}" \
+            --sdk-path "$ANDROID_HOME" \
+            --auto-accept-license \
+            --skip-update
+
+      - name: Select and strictly verify rebuilt wheels
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYSIDE_WHEEL="$(find pyside-setup/dist_android -maxdepth 1 -type f \
+            -iname 'pyside6-*-android_${{ matrix.p4a_arch }}.whl' \
+            ! -iname '*addons*' ! -iname '*essentials*' -print -quit)"
+          SHIBOKEN_WHEEL="$(find pyside-setup/dist_android -maxdepth 1 -type f \
+            -iname 'shiboken6-*-android_${{ matrix.p4a_arch }}.whl' -print -quit)"
+          test -n "$PYSIDE_WHEEL"
+          test -n "$SHIBOKEN_WHEEL"
+          READELF="$ANDROID_HOME/ndk/${ANDROID_NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+          python tools/phase22/verify_qt_android_wheels.py \
+            --pyside "$PYSIDE_WHEEL" \
+            --shiboken "$SHIBOKEN_WHEEL" \
+            --architecture "${{ matrix.p4a_arch }}" \
+            --readelf "$READELF" \
+            --locally-built
+          printf 'PYSIDE_WHEEL=%s\nSHIBOKEN_WHEEL=%s\n' \
+            "$PYSIDE_WHEEL" "$SHIBOKEN_WHEEL" >> "$GITHUB_ENV"
+
+      - name: Enable pinned NumPy and Matplotlib p4a recipes
+        if: inputs.scientific
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOYER="$(python - <<'PY'
+          from PySide6.scripts.deploy_lib.android import buildozer
+          print(buildozer.__file__)
+          PY
+          )"
+          python tools/phase22/enable_qt_scientific_requirements.py --deployer "$DEPLOYER"
+          grep -F 'python3,shiboken6,PySide6,numpy,matplotlib' "$DEPLOYER"
+
+      - name: Build the isolated P4A Qt distribution
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Buildozer 1.6 still probes the pre-cmdline-tools SDK layout
+          # ($ANDROID_HOME/tools/bin/sdkmanager).  setup-android installs
+          # sdkmanager under cmdline-tools, so expose a compatibility link
+          # before PySide's deployment wrapper invokes Buildozer.
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -path '*/bin/sdkmanager' -print -quit)"
+          test -n "$SDKMANAGER"
+          mkdir -p "$ANDROID_HOME/tools/bin"
+          ln -sf "$SDKMANAGER" "$ANDROID_HOME/tools/bin/sdkmanager"
+          "$ANDROID_HOME/tools/bin/sdkmanager" --version
+          mkdir -p phase22-runner
+          cp tools/phase22/qt_runner/main.py phase22-runner/main.py
+          cd phase22-runner
+          pyside6-android-deploy \
+            --verbose \
+            --name PyRunQtRuntime \
+            --wheel-pyside="$GITHUB_WORKSPACE/$PYSIDE_WHEEL" \
+            --wheel-shiboken="$GITHUB_WORKSPACE/$SHIBOKEN_WHEEL" \
+            --ndk-path="$ANDROID_HOME/ndk/$ANDROID_NDK_VERSION" \
+            --sdk-path="$ANDROID_HOME" \
+            --extra-modules=Charts,Gui,Multimedia,MultimediaWidgets,Network,OpenGL,OpenGLWidgets,PrintSupport,Qml,Quick,QuickControls2,QuickWidgets,Sql,Svg,SvgWidgets,Widgets \
+            --force \
+            --keep-deployment-files
+          echo 'Generated Qt deployment files:'
+          find . -maxdepth 7 -type f \( -name 'build.gradle' -o -name 'AndroidManifest.xml' -o -name 'buildozer.spec' -o -name 'pysidedeploy.spec' \) -print | sort
+
+      - name: Convert the single-ABI distribution to an AAR
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/phase22/prepare_qt_runtime_aar.py \
+            --search-root phase22-runner \
+            --license-root pyside-setup/LICENSES \
+            --output "phase22-runner/pyrun-qt-runtime-${{ matrix.abi }}.aar"
+          test -s "phase22-runner/pyrun-qt-runtime-${{ matrix.abi }}.aar"
+
+      - name: Verify scientific packages in the ABI runtime
+        if: inputs.scientific
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import sys
+          import zipfile
+          sys.path.insert(0, str(Path("tools/phase22").resolve()))
+          from verify_qt_runtime_aar import _verify_scientific_bundle
+          path = Path("phase22-runner/pyrun-qt-runtime-${{ matrix.abi }}.aar")
+          with zipfile.ZipFile(path) as archive:
+              members = {item.filename: archive.read(item) for item in archive.infolist() if not item.is_dir()}
+          _verify_scientific_bundle(members, "${{ matrix.abi }}")
+          print("Qt scientific package inventory verified for ${{ matrix.abi }}")
+          PY
+
+      - name: Upload the single-ABI runtime
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ inputs.scientific && 'phase22-qt-scientific-' || 'phase22-qt-runtime-' }}${{ matrix.abi }}
+          path: phase22-runner/pyrun-qt-runtime-${{ matrix.abi }}.aar
+          if-no-files-found: error
+          retention-days: 7
+
+  merge-and-verify:
+    name: Merge and release-gate universal Qt runtime
+    needs: build-qt-runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out PyRun
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Download both ABI artifacts
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          pattern: ${{ inputs.scientific && 'phase22-qt-scientific-*' || 'phase22-qt-runtime-*' }}
+          path: phase22-aars
+          merge-multiple: true
+
+      - name: Merge both ABIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/phase22/merge_qt_runtime_aars.py \
+            --arm64 phase22-aars/pyrun-qt-runtime-arm64-v8a.aar \
+            --x86-64 phase22-aars/pyrun-qt-runtime-x86_64.aar \
+            --output phase22-aars/pyrun-qt-runtime-6.12.0-universal.aar
+
+      - name: Enforce the complete release contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXTRA=()
+          if [[ "${{ inputs.scientific }}" == "true" ]]; then
+            EXTRA+=(--require-scientific)
+          fi
+          python tools/phase22/verify_qt_runtime_aar.py \
+            --aar phase22-aars/pyrun-qt-runtime-6.12.0-universal.aar \
+            --readelf /usr/bin/readelf \
+            --runner tools/phase22/qt_runner/main.py \
+            "${EXTRA[@]}"
+          cd phase22-aars
+          sha256sum pyrun-qt-runtime-6.12.0-universal.aar \
+            > pyrun-qt-runtime-6.12.0-universal.aar.sha256
+
+      - name: Upload the verified universal runtime
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ inputs.scientific && 'phase22-qt-scientific-6.12.0-universal' || 'phase22-qt-runtime-6.12.0-universal' }}
+          path: |
+            phase22-aars/pyrun-qt-runtime-6.12.0-universal.aar
+            phase22-aars/pyrun-qt-runtime-6.12.0-universal.aar.sha256
+          if-no-files-found: error
+          retention-days: 30

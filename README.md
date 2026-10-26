@@ -1,5 +1,21 @@
 # PyRun Android wheels
 
+## Qt scientific runtime proof
+
+`Phase 22 build universal Qt Android runtime` is a manual workflow for the
+app's separate PySide6 runtime. With `scientific=true` (the default), it builds
+NumPy and Matplotlib into the same Qt Python runtime for `arm64-v8a` and
+`x86_64`. The universal AAR is uploaded as a short-lived review artifact only
+after both ABI package inventories and native library checks pass.
+
+The separate `Phase 22 publish signed Qt runtime` workflow accepts a successful
+scientific build from `main`, rechecks the AAR, signs its exact hash with the
+protected `wheel-release` key, and creates a new immutable GitHub Release.
+This AAR is a build input for PyRun's APK/AAB; it is not installed by `pip` or
+downloaded as executable code by the app. A successful CI build is not a device
+runtime proof. The app pin is updated only after the release and Android runtime
+checks pass.
+
 This is PyRun's separate source repository for reviewed native Android wheels.
 It is not the Android app and is not a public PyPI index. The initial package,
 `pyrun-native-probe`, is a tiny compiled extension used to exercise the complete
